@@ -97,7 +97,7 @@ void DrawFrame( void )
 	double mintime = 100;
 	double maxtime = 0;
 	double stddev = 0;
-	double last;
+	double last = -1;
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -125,11 +125,12 @@ void DrawFrame( void )
 
 		}
 
-		if( i == 1 )
+		if( last < 0 && rt > st )
 			last = dt;
 		int h = dt;
-
-		CNFGTackSegment( i, screeny, i, screeny - h );
+		int top = screeny - h;
+		if( top < 0 ) top = 0;
+		CNFGTackSegment( i, screeny-1, i, top );
 	}
 
 	double avg = totaltime / totalcountok;
@@ -177,7 +178,7 @@ void DrawFrame( void )
 	CNFGColor( 0xffffff );
 	CNFGPenX = 10; CNFGPenY = 10;
 	CNFGDrawText( stbuf, 2 );
-
+	OGUSleep( 1000 );
 }
 
 int main( int argc, const char ** argv )
@@ -200,7 +201,6 @@ int main( int argc, const char ** argv )
 	}
 	CNFGBGColor = 0x800000;
 	CNFGDialogColor = 0x444444;
-
 	for( i = 0; i < PINGCYCLEWIDTH; i++ )
 	{
 		PingSendTimes[i] = 0;
@@ -213,7 +213,7 @@ int main( int argc, const char ** argv )
 	}
 
 	sprintf( title, "%s - cnping", argv[1] );
-	CNFGSetup( title, 640, 480 );
+	CNFGSetup( title, 320, 240 );
 
 	ping_setup();
 
