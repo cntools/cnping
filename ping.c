@@ -22,15 +22,49 @@
 /*** Use the ICMP protocol to request "echo" from destination.             ***/
 /*****************************************************************************/
 
+
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <strings.h>
+#ifdef WIN32
+#include <winsock2.h>
+#define SOL_IP       0
+#define F_SETFL              4
+#define ICMP_ECHO             8
+#define IP_TTL 2
+# define O_NONBLOCK   04000
+void bzero(void *location,__LONG32 count);
+#include <windows.h>
+#include <stdio.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <stdint.h>
+struct icmphdr {
+  uint8_t		type;
+  uint8_t		code;
+  uint16_t	checksum;
+  union {
+	struct {
+		uint16_t	id;
+		uint16_t	sequence;
+	} echo;
+	uint32_t	gateway;
+	struct {
+		uint16_t	__unused;
+		uint16_t	mtu;
+	} frag;
+  } un;
+};
+#else
 #include <sys/socket.h>
 #include <resolv.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
+#endif
 #include <stdlib.h>
+
 
 
 #define PACKETSIZE	1500
@@ -42,6 +76,7 @@ struct packet
 
 int pid=-1;
 struct protoent *proto=NULL;
+struct sockaddr_in psaddr;
 
 /*--------------------------------------------------------------------*/
 /*--- checksum - standard 1s complement checksum                   ---*/
@@ -92,21 +127,42 @@ unsigned short checksum(void *b, int len)
 /*--- listener - separate process to listen for and collect messages--*/
 /*--------------------------------------------------------------------*/
 void listener(void)
-{	int sd;
+{
+	int sd;
 	struct sockaddr_in addr;
 	unsigned char buf[1024];
 
+#ifdef WIN32
+	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
+	{
+		int lttl = 0xff;
+		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
+				sizeof(lttl)) == SOCKET_ERROR) {
+			printf( "Warning: No IP_TTL.\n" );
+		}
+	}
+
+#else
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+#endif
 	if ( sd < 0 )
 	{
 		perror("socket");
 		exit(0);
 	}
+
 	for (;;)
-	{	int bytes, len=sizeof(addr);
+	{
+		int i;
+		int bytes, len=sizeof(addr);
 
 		bzero(buf, sizeof(buf));
 		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &len);
+
+		if( buf[20] != 0 ) continue; //Make sure ping response.
+		if( buf[9] != 1 ) continue; //ICMP
+		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
+
 		if ( bytes > 0 )
 			display(buf + 28, bytes - 28 );
 		else
@@ -120,21 +176,50 @@ void listener(void)
 /*--- ping - Create message and send it.                           ---*/
 /*--------------------------------------------------------------------*/
 void ping(struct sockaddr_in *addr, float pingperiod)
-{	const int val=255;
+{
+
+#ifdef WIN32
+	const char val=255;
+#else
+	const int val=255;
+#endif
 	int i, sd, cnt=1;
 	struct packet pckt;
 	struct sockaddr_in r_addr;
 
+#ifdef WIN32
+	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
+	{
+		int lttl = 0xff;
+		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
+				sizeof(lttl)) == SOCKET_ERROR) {
+			printf( "Error with sockets.\n" );
+			exit( -1 );
+		}
+	}
+#else
 	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+#endif
+
 	if ( sd < 0 )
 	{
 		perror("socket");
 		return;
 	}
+
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 		perror("Set TTL option");
+
+#ifdef WIN32
+	{
+		//this /was/ recommended.
+		unsigned long iMode = 1;
+		ioctlsocket(sd, FIONBIO, &iMode);
+	}
+#else
 	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
 		perror("Request nonblocking I/O");
+#endif
 
 	do
 	{	int len=sizeof(r_addr);
@@ -151,7 +236,7 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 		pckt.msg[i] = 0;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum(&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize );
-		if ( sendto(sd, &pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
+		if ( sendto(sd, (char*)&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
 			perror("sendto");
 
 		if( pingperiod > 0 )
@@ -167,50 +252,28 @@ void ping_setup()
 {
 	pid = getpid();
 	proto = getprotobyname("ICMP");
+
+#ifdef WIN32
+    WSADATA wsaData;
+	int r = WSAStartup(0x0202, &wsaData );
+	if( r )
+	{
+		fprintf( stderr, "Fault!\n" );
+		exit( -2 );
+	}
+#endif
+
 }
 
 void do_pinger( const char * strhost, float _ping_period )
 {
-	struct sockaddr_in addr;
 	struct hostent *hname;
 	hname = gethostbyname(strhost);
 
-	bzero(&addr, sizeof(addr));
-	addr.sin_family = hname->h_addrtype;
-	addr.sin_port = 0;
-	addr.sin_addr.s_addr = *(long*)hname->h_addr;
-	ping(&addr, _ping_period);
-}
-
-/*--------------------------------------------------------------------*/
-/*--- main - look up host and start ping processes.                ---*/
-/*--------------------------------------------------------------------*/
-int pingmain(int count, char *strings[])
-{	struct hostent *hname;
-	struct sockaddr_in addr;
-
-	if ( count != 2 )
-	{
-		printf("usage: %s <addr>\n", strings[0]);
-		exit(0);
-	}
-	if ( count > 1 )
-	{
-		pid = getpid();
-		proto = getprotobyname("ICMP");
-		hname = gethostbyname(strings[1]);
-		bzero(&addr, sizeof(addr));
-		addr.sin_family = hname->h_addrtype;
-		addr.sin_port = 0;
-		addr.sin_addr.s_addr = *(long*)hname->h_addr;
-		if ( fork() == 0 )
-			listener();
-		else
-			ping(&addr, 1);
-		wait(0);
-	}
-	else
-		printf("usage: myping <hostname>\n");
-	return 0;
+	bzero(&psaddr, sizeof(psaddr));
+	psaddr.sin_family = hname->h_addrtype;
+	psaddr.sin_port = 0;
+	psaddr.sin_addr.s_addr = *(long*)hname->h_addr;
+	ping(&psaddr, _ping_period);
 }
 

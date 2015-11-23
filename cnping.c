@@ -5,13 +5,16 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/socket.h>
+#ifdef WIN32
+#include <windows.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <netdb.h>
+#endif
 #include "DrawFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
@@ -31,6 +34,8 @@ uint8_t pattern[8];
 double PingSendTimes[PINGCYCLEWIDTH];
 double PingRecvTimes[PINGCYCLEWIDTH];
 int current_cycle = 0;
+
+int ExtraPingSize = 0;
 
 void display(uint8_t *buf, int bytes)
 {
@@ -63,7 +68,7 @@ int load_ping_packet( uint8_t * buffer, int bufflen )
 
 	current_cycle++;
 
-	return 12;
+	return 12 + ExtraPingSize;
 }
 
 void * PingListen( void * r )
@@ -193,7 +198,7 @@ int main( int argc, const char ** argv )
 //	struct in_addr dst;
 	struct addrinfo *result;
 
-	srand( (int)(OGGetAbsoluteTime()*10) );
+	srand( (int)(OGGetAbsoluteTime()*100000) );
 
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
@@ -212,16 +217,22 @@ int main( int argc, const char ** argv )
 		fprintf( stderr, "Usage: cnping [host] [ping period in seconds (optional)]\n" );
 	}
 
+	if( argc > 3 )
+	{
+		ExtraPingSize = atoi( argv[3] );
+		printf( "Extra ping size added: %d\n", ExtraPingSize );
+	}
+
 	sprintf( title, "%s - cnping", argv[1] );
 	CNFGSetup( title, 320, 240 );
 
 	ping_setup();
 
 	pinghost = argv[1];
-	pingperiod = (argc==3)?atof( argv[2] ):.02;
+	pingperiod = (argc>=3)?atof( argv[2] ):.02;
 
-	OGCreateThread( PingListen, 0 );
 	OGCreateThread( PingSend, 0 );
+	OGCreateThread( PingListen, 0 );
 
 	while(1)
 	{

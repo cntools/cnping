@@ -7,7 +7,7 @@ LDFLAGS:=-g
 MINGW32:=/usr/bin/i686-w64-mingw32-
 
 cnping.exe : cnping.c DrawFunctions.c WinDriver.c os_generic.c ping.c
-	$(MINGW32)gcc -m32 $(CFLAGS) -o $@ $^  -lgdi32
+	$(MINGW32)gcc -g -m32 $(CFLAGS) -o $@ $^  -lgdi32 -lws2_32
 
 # Rasterizer.o
 cnping : cnping.o DrawFunctions.o XDriver.o os_generic.o ping.o
