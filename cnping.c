@@ -224,7 +224,7 @@ int main( int argc, const char ** argv )
 	}
 
 	sprintf( title, "%s - cnping", argv[1] );
-	CNFGSetup( title, 320, 240 );
+	CNFGSetup( title, 320, 155 );
 
 	ping_setup();
 
