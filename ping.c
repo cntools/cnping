@@ -74,6 +74,7 @@ struct packet
 	char msg[PACKETSIZE-sizeof(struct icmphdr)];
 };
 
+int sd;
 int pid=-1;
 struct protoent *proto=NULL;
 struct sockaddr_in psaddr;
@@ -96,60 +97,27 @@ unsigned short checksum(void *b, int len)
 	return result;
 }
 
-/*--------------------------------------------------------------------*/
-/*--- display - present echo info                                  ---*/
-/*--------------------------------------------------------------------*/
-/*void display(void *buf, int bytes)
-{	int i;
-	struct iphdr *ip = buf;
-	struct icmphdr *icmp = buf+ip->ihl*4;
 
-	printf("----------------\n");
-	for ( i = 0; i < bytes; i++ )
-	{
-		if ( !(i & 15) ) printf("\nX:  ", i);
-		printf("X ", ((unsigned char*)buf)[i]);
-	}
-	printf("\n");
-	printf("IPv%d: hdr-size=%d pkt-size=%d protocol=%d TTL=%d src=%s ",
-		ip->version, ip->ihl*4, ntohs(ip->tot_len), ip->protocol,
-		ip->ttl, inet_ntoa(ip->saddr));
-	printf("dst=%s\n", inet_ntoa(ip->daddr));
-	if ( icmp->un.echo.id == pid )
-	{
-		printf("ICMP: type[%d/%d] checksum[%d] id[%d] seq[%d]\n",
-			icmp->type, icmp->code, ntohs(icmp->checksum),
-			icmp->un.echo.id, icmp->un.echo.sequence);
-	}
-}
-*/
 /*--------------------------------------------------------------------*/
 /*--- listener - separate process to listen for and collect messages--*/
 /*--------------------------------------------------------------------*/
 void listener(void)
 {
-	int sd;
+#ifndef WIN32
+	const int val=255;
+
+	int sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+
+	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
+	{
+		perror("Set TTL option");
+			exit( -1 );
+	}
+
+#endif
+
 	struct sockaddr_in addr;
 	unsigned char buf[1024];
-
-#ifdef WIN32
-	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
-	{
-		int lttl = 0xff;
-		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
-				sizeof(lttl)) == SOCKET_ERROR) {
-			printf( "Warning: No IP_TTL.\n" );
-		}
-	}
-
-#else
-	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
-#endif
-	if ( sd < 0 )
-	{
-		perror("socket");
-		exit(0);
-	}
 
 	for (;;)
 	{
@@ -158,7 +126,6 @@ void listener(void)
 
 		bzero(buf, sizeof(buf));
 		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &len);
-
 		if( buf[20] != 0 ) continue; //Make sure ping response.
 		if( buf[9] != 1 ) continue; //ICMP
 		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
@@ -183,32 +150,9 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 #else
 	const int val=255;
 #endif
-	int i, sd, cnt=1;
+	int i, cnt=1;
 	struct packet pckt;
 	struct sockaddr_in r_addr;
-
-#ifdef WIN32
-	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
-	{
-		int lttl = 0xff;
-		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
-				sizeof(lttl)) == SOCKET_ERROR) {
-			printf( "Error with sockets.\n" );
-			exit( -1 );
-		}
-	}
-#else
-	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
-#endif
-
-	if ( sd < 0 )
-	{
-		perror("socket");
-		return;
-	}
-
-	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
-		perror("Set TTL option");
 
 #ifdef WIN32
 	{
@@ -254,14 +198,46 @@ void ping_setup()
 	proto = getprotobyname("ICMP");
 
 #ifdef WIN32
+/*
     WSADATA wsaData;
 	int r = WSAStartup(0x0202, &wsaData );
+*/
+	WSADATA wsaData;
+	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
 	if( r )
 	{
 		fprintf( stderr, "Fault!\n" );
 		exit( -2 );
 	}
 #endif
+
+
+#ifdef WIN32
+	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
+	{
+		int lttl = 0xff;
+		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
+				sizeof(lttl)) == SOCKET_ERROR) {
+			printf( "Warning: No IP_TTL.\n" );
+		}
+	}
+#else
+	const int val=255;
+
+	sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+
+	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
+	{
+		perror("Set TTL option");
+			exit( -1 );
+	}
+
+#endif
+	if ( sd < 0 )
+	{
+		perror("socket");
+		exit(0);
+	}
 
 }
 

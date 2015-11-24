@@ -214,7 +214,8 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		fprintf( stderr, "Usage: cnping [host] [ping period in seconds (optional)]\n" );
+		fprintf( stderr, "Usage: cnping [host] [ping period in seconds (optional) default 0.02] [ping packet extra size (above 12), default = 0]\n" );
+		return -1;
 	}
 
 	if( argc > 3 )
