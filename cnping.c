@@ -186,7 +186,11 @@ void DrawFrame( void )
 	OGUSleep( 1000 );
 }
 
+#ifdef WIN32
+int mymain( int argc, const char ** argv )
+#else
 int main( int argc, const char ** argv )
+#endif
 {
 	char title[1024];
 	int i, x, y, r;
@@ -214,7 +218,7 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		fprintf( stderr, "Usage: cnping [host] [ping period in seconds (optional) default 0.02] [ping packet extra size (above 12), default = 0]\n" );
+		ERRM( "Usage: cnping [host] [ping period in seconds (optional) default 0.02] [ping packet extra size (above 12), default = 0]\n" );
 		return -1;
 	}
 
@@ -261,8 +265,8 @@ int main( int argc, const char ** argv )
 			LastFPSTime+=1;
 		}
 
-		SecToWait = .016 - ( ThisTime - LastFrameTime );
-		LastFrameTime += .016;
+		SecToWait = .030 - ( ThisTime - LastFrameTime );
+		LastFrameTime += .030;
 		if( SecToWait > 0 )
 			OGUSleep( (int)( SecToWait * 1000000 ) );
 	}
@@ -270,3 +274,107 @@ int main( int argc, const char ** argv )
 	return(0);
 }
 
+#ifdef WIN32
+
+//from: http://alter.org.ua/docs/win/args/
+ PCHAR*
+    CommandLineToArgvA(
+        PCHAR CmdLine,
+        int* _argc
+        )
+    {
+        PCHAR* argv;
+        PCHAR  _argv;
+        ULONG   len;
+        ULONG   argc;
+        CHAR   a;
+        ULONG   i, j;
+
+        BOOLEAN  in_QM;
+        BOOLEAN  in_TEXT;
+        BOOLEAN  in_SPACE;
+
+        len = strlen(CmdLine);
+        i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
+
+        argv = (PCHAR*)GlobalAlloc(GMEM_FIXED,
+            i + (len+2)*sizeof(CHAR));
+
+        _argv = (PCHAR)(((PUCHAR)argv)+i);
+
+        argc = 0;
+        argv[argc] = _argv;
+        in_QM = FALSE;
+        in_TEXT = FALSE;
+        in_SPACE = TRUE;
+        i = 0;
+        j = 0;
+
+        while( a = CmdLine[i] ) {
+            if(in_QM) {
+                if(a == '\"') {
+                    in_QM = FALSE;
+                } else {
+                    _argv[j] = a;
+                    j++;
+                }
+            } else {
+                switch(a) {
+                case '\"':
+                    in_QM = TRUE;
+                    in_TEXT = TRUE;
+                    if(in_SPACE) {
+                        argv[argc] = _argv+j;
+                        argc++;
+                    }
+                    in_SPACE = FALSE;
+                    break;
+                case ' ':
+                case '\t':
+                case '\n':
+                case '\r':
+                    if(in_TEXT) {
+                        _argv[j] = '\0';
+                        j++;
+                    }
+                    in_TEXT = FALSE;
+                    in_SPACE = TRUE;
+                    break;
+                default:
+                    in_TEXT = TRUE;
+                    if(in_SPACE) {
+                        argv[argc] = _argv+j;
+                        argc++;
+                    }
+                    _argv[j] = a;
+                    j++;
+                    in_SPACE = FALSE;
+                    break;
+                }
+            }
+            i++;
+        }
+        _argv[j] = '\0';
+        argv[argc] = NULL;
+
+        (*_argc) = argc;
+        return argv;
+    }
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	int argc;
+	char cts[8192];
+	sprintf( cts, "%s %s", GetCommandLine(), lpCmdLine );
+
+	ShowWindow (GetConsoleWindow(), SW_HIDE);
+	char ** argv = CommandLineToArgvA(
+        cts,
+        &argc
+        );
+//	MessageBox( 0, argv[1], "X", 0 );
+	return mymain( argc-1, (const char**)argv );
+}
+
+#endif

@@ -20,5 +20,16 @@ void do_pinger( const char * strhost, float _ping_period ); //If pingperiod = -1
 
 void ping_setup();
 
+#ifdef WIN32
+
+extern char errbuffer[1024];
+#define ERRM(x...) { sprintf( errbuffer, x ); MessageBox( 0, errbuffer, "cnping", 0 ); }
+
+#else
+
+#define ERRM(x...) fprintf( stderr, x );
+
+#endif
+
 #endif
 

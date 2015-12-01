@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <strings.h>
+#include "ping.h"
 #ifdef WIN32
 #include <winsock2.h>
 #define SOL_IP       0
@@ -110,7 +111,7 @@ void listener(void)
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		perror("Set TTL option");
+		ERRM("Erro: could not set TTL option\n");
 			exit( -1 );
 	}
 
@@ -162,7 +163,7 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 	}
 #else
 	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
-		perror("Request nonblocking I/O");
+		ERRM("Warning: Request nonblocking I/O failed.");
 #endif
 
 	do
@@ -206,7 +207,7 @@ void ping_setup()
 	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
 	if( r )
 	{
-		fprintf( stderr, "Fault!\n" );
+		ERRM( "Fault in WSAStartup\n" );
 		exit( -2 );
 	}
 #endif
@@ -228,14 +229,14 @@ void ping_setup()
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		perror("Set TTL option");
-			exit( -1 );
+		ERRM("Error: Failed to set TTL option\n");
+		exit( -1 );
 	}
 
 #endif
 	if ( sd < 0 )
 	{
-		perror("socket");
+		ERRM("Error: Could not create raw socket\n");
 		exit(0);
 	}
 
@@ -252,4 +253,7 @@ void do_pinger( const char * strhost, float _ping_period )
 	psaddr.sin_addr.s_addr = *(long*)hname->h_addr;
 	ping(&psaddr, _ping_period);
 }
+
+char errbuffer[1024];
+
 
