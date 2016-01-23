@@ -178,7 +178,6 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 		pckt.hdr.type = ICMP_ECHO;
 		pckt.hdr.un.echo.id = pid;
 		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
-		pckt.msg[i] = 0;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum(&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize );
 		if ( sendto(sd, (char*)&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
