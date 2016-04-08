@@ -153,8 +153,6 @@ void DrawFrame( void )
 			dt = rt - st;
 			dt *= 1000;
 			stddev += (dt-avg)*(dt-avg);
-			//dt *= GraphScaleFactor;
-
 		}
 	}
 
@@ -162,12 +160,17 @@ void DrawFrame( void )
 
 	stddev = sqrt(stddev);
 
+	int avg_gui    = avg*GuiYScaleFactor;
+	int stddev_gui = stddev*GuiYScaleFactor;
+
 	CNFGColor( 0xff00 );
-	int l = avg;
+
+
+	int l = avg_gui;
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
-	l = avg + stddev;
+	l = (avg_gui) + (stddev_gui);
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
-	l = avg - stddev;
+	l = (avg_gui) - (stddev_gui);
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
 
 	char stbuf[1024];
