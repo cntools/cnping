@@ -24,6 +24,7 @@ unsigned long iframeno = 0;
 short screenx, screeny;
 const char * pinghost;
 float pingperiod;
+double GuiYScaleFactor;
 
 uint8_t pattern[8];
 
@@ -132,7 +133,7 @@ void DrawFrame( void )
 
 		if( last < 0 && rt > st )
 			last = dt;
-		int h = dt;
+		int h = dt*GuiYScaleFactor;
 		int top = screeny - h;
 		if( top < 0 ) top = 0;
 		CNFGTackSegment( i, screeny-1, i, top );
@@ -159,12 +160,17 @@ void DrawFrame( void )
 
 	stddev = sqrt(stddev);
 
+	int avg_gui    = avg*GuiYScaleFactor;
+	int stddev_gui = stddev*GuiYScaleFactor;
+
 	CNFGColor( 0xff00 );
-	int l = avg;
+
+
+	int l = avg_gui;
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
-	l = avg + stddev;
+	l = (avg_gui) + (stddev_gui);
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
-	l = avg - stddev;
+	l = (avg_gui) - (stddev_gui);
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
 
 	char stbuf[1024];
@@ -218,7 +224,12 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		ERRM( "Usage: cnping [host] [ping period in seconds (optional) default 0.02] [ping packet extra size (above 12), default = 0]\n" );
+		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
+
+			  "   [host]           -- domain or IP address of ping target \n"
+			  "   [period]         -- period in seconds (optional), default 0.02 \n"
+			  "   [extra size]     -- ping packet extra size (above 12), optional, default = 0 \n"
+			  "   [y-axis scaling] -- see more swing for small values (optional), default = 1\n");
 		return -1;
 	}
 
@@ -235,6 +246,8 @@ int main( int argc, const char ** argv )
 
 	pinghost = argv[1];
 	pingperiod = (argc>=3)?atof( argv[2] ):.02;
+
+	GuiYScaleFactor = (argc>=4)?atof( argv[4] ):1;
 
 	OGCreateThread( PingSend, 0 );
 	OGCreateThread( PingListen, 0 );
