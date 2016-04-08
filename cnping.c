@@ -221,9 +221,12 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		ERRM( "Usage: cnping [host] [ping period in seconds (optional) default 0.02] "
-			  "[ping packet extra size (above 12), default = 0] "
-			  "[GUI y-axis scale factor (optional), default = 1]\n");
+		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
+
+			  "   [host]           -- domain or IP address of ping target \n"
+			  "   [period]         -- period in seconds (optional), default 0.02 \n"
+			  "   [extra size]     -- ping packet extra size (above 12), optional, default = 0 \n"
+			  "   [y-axis scaling] -- see more swing for small values (optional), default = 1\n");
 		return -1;
 	}
 
