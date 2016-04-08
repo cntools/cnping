@@ -247,7 +247,7 @@ int main( int argc, const char ** argv )
 	pinghost = argv[1];
 	pingperiod = (argc>=3)?atof( argv[2] ):.02;
 
-	GuiYScaleFactor = (argc>=4)?atof( argv[4] ):1;
+	GuiYScaleFactor = (argc>4)?atof( argv[4] ):1;
 
 	OGCreateThread( PingSend, 0 );
 	OGCreateThread( PingListen, 0 );
