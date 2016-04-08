@@ -24,7 +24,7 @@ unsigned long iframeno = 0;
 short screenx, screeny;
 const char * pinghost;
 float pingperiod;
-double GuiYScaleFactor;
+float GuiYScaleFactor;
 
 uint8_t pattern[8];
 
@@ -36,7 +36,7 @@ double PingSendTimes[PINGCYCLEWIDTH];
 double PingRecvTimes[PINGCYCLEWIDTH];
 int current_cycle = 0;
 
-int ExtraPingSize = 0;
+int ExtraPingSize;
 
 void display(uint8_t *buf, int bytes)
 {
@@ -222,6 +222,7 @@ int main( int argc, const char ** argv )
 		PingRecvTimes[i] = 0;
 	}
 
+
 	if( argc < 2 )
 	{
 		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
@@ -233,21 +234,43 @@ int main( int argc, const char ** argv )
 		return -1;
 	}
 
+
+	if( argc > 2 )
+	{
+		pingperiod = atof( argv[2] );
+		printf( "Extra ping period: %f\n", pingperiod );
+	}
+	else
+	{
+		pingperiod = 0.02;
+	}
+
 	if( argc > 3 )
 	{
 		ExtraPingSize = atoi( argv[3] );
-		printf( "Extra ping size added: %d\n", ExtraPingSize );
+		printf( "Extra ping size:   %d\n", ExtraPingSize );
+	}
+	else
+	{
+		ExtraPingSize = 0;
 	}
 
-	sprintf( title, "%s - cnping", argv[1] );
+	if( argc > 4 )
+	{
+		GuiYScaleFactor = atof( argv[4] );
+		printf( "GuiYScaleFactor:   %f\n", GuiYScaleFactor );
+	}
+	else
+	{
+		GuiYScaleFactor = 1;
+	}
+
+	pinghost = argv[1];
+
+	sprintf( title, "%s - cnping", pinghost );
 	CNFGSetup( title, 320, 155 );
 
 	ping_setup();
-
-	pinghost = argv[1];
-	pingperiod = (argc>=3)?atof( argv[2] ):.02;
-
-	GuiYScaleFactor = (argc>4)?atof( argv[4] ):1;
 
 	OGCreateThread( PingSend, 0 );
 	OGCreateThread( PingListen, 0 );
