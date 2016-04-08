@@ -24,6 +24,7 @@ unsigned long iframeno = 0;
 short screenx, screeny;
 const char * pinghost;
 float pingperiod;
+double GuiYScaleFactor;
 
 uint8_t pattern[8];
 
@@ -132,7 +133,7 @@ void DrawFrame( void )
 
 		if( last < 0 && rt > st )
 			last = dt;
-		int h = dt;
+		int h = dt*GuiYScaleFactor;
 		int top = screeny - h;
 		if( top < 0 ) top = 0;
 		CNFGTackSegment( i, screeny-1, i, top );
@@ -152,6 +153,8 @@ void DrawFrame( void )
 			dt = rt - st;
 			dt *= 1000;
 			stddev += (dt-avg)*(dt-avg);
+			//dt *= GraphScaleFactor;
+
 		}
 	}
 
@@ -218,7 +221,9 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		ERRM( "Usage: cnping [host] [ping period in seconds (optional) default 0.02] [ping packet extra size (above 12), default = 0]\n" );
+		ERRM( "Usage: cnping [host] [ping period in seconds (optional) default 0.02] "
+			  "[ping packet extra size (above 12), default = 0] "
+			  "[GUI y-axis scale factor (optional), default = 1]\n");
 		return -1;
 	}
 
@@ -235,6 +240,8 @@ int main( int argc, const char ** argv )
 
 	pinghost = argv[1];
 	pingperiod = (argc>=3)?atof( argv[2] ):.02;
+
+	GuiYScaleFactor = (argc>=4)?atof( argv[4] ):1;
 
 	OGCreateThread( PingSend, 0 );
 	OGCreateThread( PingListen, 0 );
