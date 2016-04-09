@@ -23,13 +23,12 @@ unsigned frames = 0;
 unsigned long iframeno = 0;
 short screenx, screeny;
 const char * pinghost;
-float pingperiod;
 float GuiYScaleFactor;
 
 uint8_t pattern[8];
 
 
-#define PINGCYCLEWIDTH 1024
+#define PINGCYCLEWIDTH 2048
 #define TIMEOUT 4
 
 double PingSendTimes[PINGCYCLEWIDTH];
@@ -81,7 +80,7 @@ void * PingListen( void * r )
 
 void * PingSend( void * r )
 {
-	do_pinger( pinghost, pingperiod );
+	do_pinger( pinghost );
 	printf( "Fault on ping.\n" );
 	exit( -1 );
 }

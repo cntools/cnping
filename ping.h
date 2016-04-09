@@ -15,8 +15,12 @@ void display(uint8_t *buf, int bytes);
 int load_ping_packet( uint8_t  * buffer, int buffersize );
 
 void listener(void);
-void ping(struct sockaddr_in *addr , float pingperiod); //If pingperiod = -1, run once and exit.
-void do_pinger( const char * strhost, float _ping_period ); //If pingperiod = -1, run once and exit.
+void ping(struct sockaddr_in *addr );
+void do_pinger( const char * strhost );
+
+//If pingperiod = -1, run ping/do_pinger once and exit.
+extern float pingperiod;
+extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only approximate, if 1, spinlock until precise time for ping is hit.
 
 void ping_setup();
 

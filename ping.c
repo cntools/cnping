@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <strings.h>
 #include "ping.h"
+#include "os_generic.h"
 #ifdef WIN32
 #include <winsock2.h>
 #define SOL_IP       0
@@ -66,7 +67,8 @@ struct icmphdr {
 #endif
 #include <stdlib.h>
 
-
+float pingperiod;
+int precise_ping;
 
 #define PACKETSIZE	1500
 struct packet
@@ -143,7 +145,7 @@ void listener(void)
 /*--------------------------------------------------------------------*/
 /*--- ping - Create message and send it.                           ---*/
 /*--------------------------------------------------------------------*/
-void ping(struct sockaddr_in *addr, float pingperiod)
+void ping(struct sockaddr_in *addr )
 {
 
 #ifdef WIN32
@@ -166,6 +168,8 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 		ERRM("Warning: Request nonblocking I/O failed.");
 #endif
 
+	double stime = OGGetAbsoluteTime();
+
 	do
 	{	int len=sizeof(r_addr);
 
@@ -183,10 +187,24 @@ void ping(struct sockaddr_in *addr, float pingperiod)
 		if ( sendto(sd, (char*)&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
 			perror("sendto");
 
-		if( pingperiod > 0 )
+
+		if( precise_ping )
 		{
-			uint32_t dlw = 1000000.0*pingperiod;
-			usleep( dlw );
+			double ctime;
+			do
+			{
+				ctime = OGGetAbsoluteTime();
+				if( pingperiod >= 1000 ) stime = ctime;
+			} while( ctime < stime + pingperiod );
+			stime += pingperiod;
+		}
+		else
+		{
+			if( pingperiod > 0 )
+			{
+				uint32_t dlw = 1000000.0*pingperiod;
+				usleep( dlw );
+			}
 		}
 	} 	while( pingperiod >= 0 );
 	close( sd );
@@ -241,7 +259,7 @@ void ping_setup()
 
 }
 
-void do_pinger( const char * strhost, float _ping_period )
+void do_pinger( const char * strhost )
 {
 	struct hostent *hname;
 	hname = gethostbyname(strhost);
@@ -250,7 +268,7 @@ void do_pinger( const char * strhost, float _ping_period )
 	psaddr.sin_family = hname->h_addrtype;
 	psaddr.sin_port = 0;
 	psaddr.sin_addr.s_addr = *(long*)hname->h_addr;
-	ping(&psaddr, _ping_period);
+	ping(&psaddr );
 }
 
 char errbuffer[1024];
