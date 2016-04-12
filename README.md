@@ -5,10 +5,10 @@ Minimal Graphical IPV4 Ping Tool.  (also comes with searchnet, like nmap but sma
 
 Usage: cnping [host] [period] [extra size] [y-axis scaling]
 
-			 [host]           -- domain or IP address of ping target
-			 [period]         -- period in seconds (optional), default 0.02
-			 [extra size]     -- ping packet extra size (above 12), optional, default = 0
-			 [y-axis scaling] -- see more swing for small values (optional), default = 1
+			 [host]                 -- domain or IP address of ping target
+			 [period]               -- period in seconds (optional), default 0.02
+			 [extra size]           -- ping packet extra size (above 12), optional, default = 0
+			 [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)
 
 Picture:
 
