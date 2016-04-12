@@ -24,6 +24,7 @@ unsigned long iframeno = 0;
 short screenx, screeny;
 const char * pinghost;
 float GuiYScaleFactor;
+int GuiYscaleFactorIsConstant;
 
 uint8_t pattern[8];
 
@@ -91,11 +92,37 @@ void * PingSend( void * r )
 void HandleKey( int keycode, int bDown ){}
 void HandleButton( int x, int y, int button, int bDown ){}
 void HandleMotion( int x, int y, int mask ){}
+
+double GetGlobMaxPingTime( void )
+{
+	int i;
+	double maxtime = 0;
+
+	for( i = 0; i < screenx; i++ )
+	{
+		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		double st = PingSendTimes[index];
+		double rt = PingRecvTimes[index];
+
+		double dt = 0;
+
+		if( rt > st )
+		{
+			dt = rt - st;
+			dt *= 1000;
+			if( dt > maxtime ) maxtime = dt;
+		}
+	}
+
+	return maxtime;
+}
+
 void DrawFrame( void )
 {
 	int i, x, y;
 
 	double now = OGGetAbsoluteTime();
+	double globmaxtime = GetGlobMaxPingTime();
 
 	double totaltime = 0;
 	int totalcountok = 0;
@@ -128,6 +155,11 @@ void DrawFrame( void )
 			dt = now - st;
 			dt *= 1000;
 
+		}
+
+		if (!GuiYscaleFactorIsConstant)
+		{
+			GuiYScaleFactor =  screeny / globmaxtime;
 		}
 
 		if( last < 0 && rt > st )
@@ -226,10 +258,10 @@ int main( int argc, const char ** argv )
 	{
 		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
 
-			  "   [host]           -- domain or IP address of ping target \n"
-			  "   [period]         -- period in seconds (optional), default 0.02 \n"
-			  "   [extra size]     -- ping packet extra size (above 12), optional, default = 0 \n"
-			  "   [y-axis scaling] -- see more swing for small values (optional), default = 1\n");
+			  "   [host]                 -- domain or IP address of ping target \n"
+			  "   [period]               -- period in seconds (optional), default 0.02 \n"
+			  "   [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
+			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n");
 		return -1;
 	}
 
@@ -257,11 +289,12 @@ int main( int argc, const char ** argv )
 	if( argc > 4 )
 	{
 		GuiYScaleFactor = atof( argv[4] );
+		GuiYscaleFactorIsConstant = 1;
 		printf( "GuiYScaleFactor:   %f\n", GuiYScaleFactor );
 	}
 	else
 	{
-		GuiYScaleFactor = 1;
+		printf( "GuiYScaleFactor:   %s\n", "dynamic" );
 	}
 
 	pinghost = argv[1];
