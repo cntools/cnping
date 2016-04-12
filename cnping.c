@@ -159,7 +159,7 @@ void DrawFrame( void )
 
 		if (!GuiYscaleFactorIsConstant)
 		{
-			GuiYScaleFactor =  screeny / globmaxtime;
+			GuiYScaleFactor =  (screeny - 50) / globmaxtime;
 		}
 
 		if( last < 0 && rt > st )
