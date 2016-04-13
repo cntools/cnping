@@ -84,7 +84,8 @@ int main( int argc, char ** argv )
 		send_id[2] = (cur>>8)&0xff;
 		send_id[3] = (cur)&0xff;
 //		printf( "Pinging: %s\n", dispip );
-		do_pinger( dispip, -1 );
+		pingperiod = -1;
+		do_pinger( dispip );
 
 		OGUSleep( (int)(speed * 1000000) );
 	}
