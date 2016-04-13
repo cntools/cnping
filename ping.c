@@ -156,7 +156,6 @@ void ping(struct sockaddr_in *addr )
 	int i, cnt=1;
 	struct packet pckt;
 	struct sockaddr_in r_addr;
-
 #ifdef WIN32
 	{
 		//this /was/ recommended.
@@ -207,7 +206,7 @@ void ping(struct sockaddr_in *addr )
 			}
 		}
 	} 	while( pingperiod >= 0 );
-	close( sd );
+	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
 void ping_setup()
