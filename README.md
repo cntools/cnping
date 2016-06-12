@@ -13,3 +13,19 @@ Usage: cnping [host] [period] [extra size] [y-axis scaling]
 Picture:
 
 <IMG SRC=cnping.png>
+
+To build on ubuntu, please run: 
+
+```
+sudo apt install libxinerama-dev libxext-dev libx11-dev build-essential
+make linuxinstall
+```
+
+'linuxinstall' builds the tool and copies it to your usr/local/bin folder, and sets the sticky bit allowing it to run as though it were root, allowing it to create raw sockets.
+
+```
+	sudo cp cnping /usr/local/bin/
+	sudo chmod +s /usr/local/bin/cnping
+```
+
+
