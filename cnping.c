@@ -126,7 +126,7 @@ void DrawFrame( void )
 
 	double totaltime = 0;
 	int totalcountok = 0;
-	double mintime = 100;
+	double mintime = 10000;
 	double maxtime = 0;
 	double stddev = 0;
 	double last = -1;
