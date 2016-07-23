@@ -224,6 +224,93 @@ void DrawFrame( void )
 }
 
 #ifdef WIN32
+
+const char * glargv[10];
+int glargc = 0;
+
+INT_PTR CALLBACK TextEntry( HWND   hwndDlg,
+	UINT   uMsg,
+	WPARAM wParam,
+	LPARAM lParam )
+{
+
+//	printf( "%d %d %d\n", uMsg, wParam, lParam );
+	switch( uMsg )
+	{
+	//case IDC_SAVESETS:
+	//	GetDlgItemText(DLG_SETS, IDC_SETS1, stringVariable, sizeof(stringVariable));
+//	case 31:
+//		printf( "Exit\n" );
+//		exit( 0 );
+//		return 0;
+	case WM_INITDIALOG:
+		SetDlgItemText(hwndDlg, 4, "0.02");
+		SetDlgItemText(hwndDlg, 5, "0" );
+		return 0;
+	case WM_COMMAND:
+		switch( wParam>>24 )
+		{
+			case 4: case 3: return 0; //keyboard input
+			case 1: case 2: return 0; //focus changed.
+			case 0:
+			{
+				int id = wParam & 0xffffff;
+				if( id == 8 )
+				{
+					exit( -1 );
+				}
+
+				char Address[1024]; GetDlgItemText(hwndDlg, 3, Address, sizeof(Address));
+				char Period[1024]; GetDlgItemText(hwndDlg, 4, Period, sizeof(Period));
+				char Extra[1024]; GetDlgItemText(hwndDlg, 5, Extra, sizeof(Extra));
+				char Scaling[1024]; GetDlgItemText(hwndDlg, 6, Scaling, sizeof(Scaling));
+			
+				if( strlen( Address ) )
+				{
+					glargc = 2;
+					glargv[1] = strdup( Address );
+					if( strlen( Period ) )
+					{
+						glargc = 3;
+						glargv[2] = strdup( Period );
+						if( strlen( Extra ) )
+						{
+							glargc = 4;
+							glargv[3] = strdup( Extra );
+							if( strlen( Scaling ) )
+							{
+								glargc = 5;
+								glargv[4] = strdup( Scaling );
+							}
+						}
+					}
+				}
+
+//				printf( "+++%s\n", stringVariable );
+//				printf( "Commit %p/%d\n", lParam, id );
+				EndDialog(hwndDlg, 0);
+				return 0; //User pressed enter.
+			}
+		}
+
+//case IDC_SAVESETS:  http://www.cplusplus.com/forum/beginner/19843/
+//GetDlgItemText(DLG_SETS, IDC_SETS1, stringVariable, sizeof(stringVariable));
+
+		//printf( "cmd %p %p %p\n", uMsg, wParam, lParam );
+		return 0;
+	case WM_CTLCOLORBTN:
+		//printf( "ctr %p %p %p\n", uMsg, wParam, lParam );
+		//return 0;
+	case 32: case 512: case 132: case 24: case 70:
+	case 127: case 783: case 28: case 134: case 6: case 7:
+	case 8: case 312: case 15: case 71: case 133: case 307:
+	case 20: case 310: case 33:
+		return 0;
+	}
+	//MessageBox( 0, "XXX", "cnping", 0 );
+	//printf( "XXX %d %d %d\n", uMsg, wParam, lParam );
+	return 0;
+}
 int mymain( int argc, const char ** argv )
 #else
 int main( int argc, const char ** argv )
@@ -253,15 +340,27 @@ int main( int argc, const char ** argv )
 		PingRecvTimes[i] = 0;
 	}
 
+#ifdef WIN32
+	if( argc < 2 )
+	{
+		int ret = DialogBox(0, "IPDialog", 0, TextEntry );
+		argc = glargc;
+		argv = glargv;
+	}
+#endif
 
 	if( argc < 2 )
 	{
+#ifdef WIN32
+		ERRM( "Need at least a host address to ping.\n" );
+#else
 		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
 
 			  "   [host]                 -- domain or IP address of ping target \n"
 			  "   [period]               -- period in seconds (optional), default 0.02 \n"
 			  "   [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n");
+#endif
 		return -1;
 	}
 
