@@ -208,7 +208,11 @@ void CNFGDrawText( const char * text, int scale )
 				int x2 = (int)((((*(lmap+1)) & 0x70)>>4)*scale + iox);
 				int y2 = (int)(((*(lmap+1)) & 0x0f)*scale + ioy);
 				lmap++;
-				CNFGTackSegment( x1, y1, x2, y2 );
+				if(x1 == x2 && y1 == y2){
+					CNFGTackPixel( x1, y1 );
+				} else {
+					CNFGTackSegment( x1, y1, x2, y2 );
+				}
 				bQuit = *lmap & 0x80;
 				lmap++;
 			} while( !bQuit );
