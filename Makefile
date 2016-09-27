@@ -1,8 +1,8 @@
 all : cnping searchnet cnping-mousey
 
-CFLAGS:=$(CFLAGS) -g -Os
+CFLAGS:=$(CFLAGS) -g -Os -I/opt/X11/include
 CXXFLAGS:=$(CFLAGS)
-LDFLAGS:=-g
+LDFLAGS:=-g -L/opt/X11/lib/
 
 MINGW32:=/usr/bin/i686-w64-mingw32-
 
@@ -24,5 +24,5 @@ linuxinstall : cnping
 	sudo chmod +s /usr/local/bin/cnping
 
 clean : 
-	rm -rf *.o *~ cnping cnping.exe
+	rm -rf *.o *~ cnping cnping.exe cnping-mousey searchnet
 

@@ -10,6 +10,10 @@
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#ifdef __APPLE__
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#endif
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
