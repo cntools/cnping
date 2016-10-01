@@ -62,6 +62,31 @@ struct icmphdr {
 #include <sys/socket.h>
 #include <resolv.h>
 #include <netdb.h>
+
+#ifdef __APPLE__
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+struct icmphdr {
+  uint8_t		type;
+  uint8_t		code;
+  uint16_t	checksum;
+  union {
+	struct {
+		uint16_t	id;
+		uint16_t	sequence;
+	} echo;
+	uint32_t	gateway;
+	struct {
+		uint16_t	__unused;
+		uint16_t	mtu;
+	} frag;
+  } un;
+};
+#ifndef SOL_IP
+#define SOL_IP IPPROTO_IP
+#endif
+#endif
+
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #endif
