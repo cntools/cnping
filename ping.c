@@ -22,7 +22,7 @@
 /*** Use the ICMP protocol to request "echo" from destination.             ***/
 /*****************************************************************************/
 
-
+#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
