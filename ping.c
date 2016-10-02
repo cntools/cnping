@@ -17,7 +17,7 @@
 */
 
 /*****************************************************************************/
-/*** myping.c                                                              ***/
+/*** ping.c                                                                ***/
 /***                                                                       ***/
 /*** Use the ICMP protocol to request "echo" from destination.             ***/
 /*****************************************************************************/
@@ -42,30 +42,20 @@ void bzero(void *location,__LONG32 count);
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdint.h>
-struct icmphdr {
-  uint8_t		type;
-  uint8_t		code;
-  uint16_t	checksum;
-  union {
-	struct {
-		uint16_t	id;
-		uint16_t	sequence;
-	} echo;
-	uint32_t	gateway;
-	struct {
-		uint16_t	__unused;
-		uint16_t	mtu;
-	} frag;
-  } un;
-};
 #else
 #include <sys/socket.h>
 #include <resolv.h>
 #include <netdb.h>
-
 #ifdef __APPLE__
-#include <netinet/in_systm.h>
+#ifndef SOL_IP
+#define SOL_IP IPPROTO_IP
+#endif
+#endif
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#endif
+#include <stdlib.h>
+#if defined WIN32 || defined __APPLE__
 struct icmphdr {
   uint8_t		type;
   uint8_t		code;
@@ -82,15 +72,7 @@ struct icmphdr {
 	} frag;
   } un;
 };
-#ifndef SOL_IP
-#define SOL_IP IPPROTO_IP
 #endif
-#endif
-
-#include <netinet/in.h>
-#include <netinet/ip_icmp.h>
-#endif
-#include <stdlib.h>
 
 float pingperiod;
 int precise_ping;
