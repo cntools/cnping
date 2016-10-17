@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 XWindowAttributes CNFGWinAtt;
+XClassHint *CNFGClassHint;
 Display *CNFGDisplay;
 Window CNFGWindow;
 Pixmap CNFGPixmap;
@@ -35,6 +36,20 @@ void CNFGGetDimensions( short * x, short * y )
 static void InternalLinkScreenAndGo( const char * WindowName )
 {
 	XGetWindowAttributes( CNFGDisplay, CNFGWindow, &CNFGWinAtt );
+
+	XGetClassHint( CNFGDisplay, CNFGWindow, CNFGClassHint );
+	if (!CNFGClassHint) {
+		CNFGClassHint = XAllocClassHint();
+		if (CNFGClassHint) {
+			CNFGClassHint->res_name = "cnping";
+			CNFGClassHint->res_class = "cnping";
+			XSetClassHint( CNFGDisplay, CNFGWindow, CNFGClassHint );
+		} else {
+			fprintf( stderr, "Failed to allocate XClassHint!\n" );
+		}
+	} else {
+		fprintf( stderr, "Pre-existing XClassHint\n" );
+	}
 
 	XSelectInput (CNFGDisplay, CNFGWindow, KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask | ExposureMask | PointerMotionMask );
 	XSetStandardProperties( CNFGDisplay, CNFGWindow, WindowName, WindowName, None, NULL, 0, NULL );
