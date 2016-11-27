@@ -130,6 +130,7 @@ void DrawFrame( void )
 	double maxtime = 0;
 	double stddev = 0;
 	double last = -1;
+	double loss = 100.00;
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -171,6 +172,7 @@ void DrawFrame( void )
 	}
 
 	double avg = totaltime / totalcountok;
+	loss = (double) (screenx - totalcountok) / screenx * 100;
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -211,6 +213,7 @@ void DrawFrame( void )
 	sptr += sprintf( sptr, "Max : %5.2f ms\n", maxtime );
 	sptr += sprintf( sptr, "Avg : %5.2f ms\n", avg );
 	sptr += sprintf( sptr, "Std : %5.2f ms\n", stddev );
+	sptr += sprintf( sptr, "Loss: %5.2f %\n", loss );
 	CNFGColor( 0x00 );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
 	{
