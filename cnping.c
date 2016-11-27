@@ -213,7 +213,7 @@ void DrawFrame( void )
 	sptr += sprintf( sptr, "Max : %5.2f ms\n", maxtime );
 	sptr += sprintf( sptr, "Avg : %5.2f ms\n", avg );
 	sptr += sprintf( sptr, "Std : %5.2f ms\n", stddev );
-	sptr += sprintf( sptr, "Loss: %5.2f %\n", loss );
+	sptr += sprintf( sptr, "Loss: %5.1f %%\n", loss );
 	CNFGColor( 0x00 );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
 	{
