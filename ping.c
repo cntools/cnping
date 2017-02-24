@@ -22,11 +22,9 @@
 /*** Use the ICMP protocol to request "echo" from destination.             ***/
 /*****************************************************************************/
 
-#include <unistd.h>
 #include <string.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <strings.h>
 #include "ping.h"
 #include "os_generic.h"
 #ifdef WIN32
@@ -36,13 +34,27 @@
 #define ICMP_ECHO             8
 #define IP_TTL 2
 # define O_NONBLOCK   04000
+
+#ifndef _MSC_VER
 void bzero(void *location,__LONG32 count);
+#else
+#pragma comment(lib, "Ws2_32.lib")
+void usleep(int x) {
+	Sleep(x / 1000);
+}
+void bzero(void * loc, int len)
+{
+	memset(loc, 0, len);
+}
+#endif
+
 #include <windows.h>
 #include <stdio.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <stdint.h>
 #else
+#include <unistd.h>
 #include <sys/socket.h>
 #include <resolv.h>
 #include <netdb.h>
@@ -127,15 +139,25 @@ void listener(void)
 #endif
 
 	struct sockaddr_in addr;
-	unsigned char buf[1024];
-
+	unsigned char buf[8192];
+#ifdef WIN32
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 	for (;;)
 	{
 		int i;
 		int bytes, len=sizeof(addr);
 
 		bzero(buf, sizeof(buf));
+#ifdef WIN32
+		WSAPOLLFD fda[1];
+		fda[0].fd = sd;
+		fda[0].events = POLLIN;
+		WSAPoll(fda, 1, 10);
+#endif
+		keep_retry_quick:
 		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &len);
+		if (bytes == -1) continue;
 		if( buf[20] != 0 ) continue; //Make sure ping response.
 		if( buf[9] != 1 ) continue; //ICMP
 		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
@@ -144,6 +166,8 @@ void listener(void)
 			display(buf + 28, bytes - 28 );
 		else
 			perror("recvfrom");
+
+		goto keep_retry_quick;
 	}
 	printf( "Fault on listen.\n" );
 	exit(0);
@@ -168,6 +192,8 @@ void ping(struct sockaddr_in *addr )
 		//this /was/ recommended.
 		unsigned long iMode = 1;
 		ioctlsocket(sd, FIONBIO, &iMode);
+		
+
 	}
 #else
 	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
@@ -190,6 +216,7 @@ void ping(struct sockaddr_in *addr )
 		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum(&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize );
+
 		if ( sendto(sd, (char*)&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
 			perror("sendto");
 
@@ -237,7 +264,7 @@ void ping_setup()
 
 
 #ifdef WIN32
-	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, 0);
+	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
 	{
 		int lttl = 0xff;
 		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, 
