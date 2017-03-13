@@ -126,6 +126,7 @@ void DrawFrame( void )
 
 	double totaltime = 0;
 	int totalcountok = 0;
+	int totalcountloss = 0;
 	double mintime = 10000;
 	double maxtime = 0;
 	double stddev = 0;
@@ -140,7 +141,7 @@ void DrawFrame( void )
 
 		double dt = 0;
 
-		if( rt > st )
+		if( rt > st ) // ping received
 		{
 			CNFGColor( 0xffffff );
 			dt = rt - st;
@@ -149,13 +150,20 @@ void DrawFrame( void )
 			if( dt < mintime ) mintime = dt;
 			if( dt > maxtime ) maxtime = dt;
 			totalcountok++;
+			if( last < 0)
+				last = dt;
 		}
-		else
+		else if (st != 0) // ping sent but not received
 		{
 			CNFGColor( 0xff );
 			dt = now - st;
 			dt *= 1000;
-
+			totalcountloss++;
+		}
+		else // no ping sent for this point in time (after startup)
+		{
+			CNFGColor( 0x0 );
+			dt = 99 * 1000; // assume 99s to fill screen black
 		}
 
 		if (!GuiYscaleFactorIsConstant)
@@ -163,8 +171,6 @@ void DrawFrame( void )
 			GuiYScaleFactor =  (screeny - 50) / globmaxtime;
 		}
 
-		if( last < 0 && rt > st )
-			last = dt;
 		int h = dt*GuiYScaleFactor;
 		int top = screeny - h;
 		if( top < 0 ) top = 0;
@@ -172,7 +178,7 @@ void DrawFrame( void )
 	}
 
 	double avg = totaltime / totalcountok;
-	loss = (double) (screenx - totalcountok) / screenx * 100;
+	loss = (double) totalcountloss / (totalcountok + totalcountloss) * 100;
 
 	for( i = 0; i < screenx; i++ )
 	{

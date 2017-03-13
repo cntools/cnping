@@ -4,7 +4,8 @@ CFLAGS:=$(CFLAGS) -g -Os -I/opt/X11/include
 CXXFLAGS:=$(CFLAGS)
 LDFLAGS:=-g -L/opt/X11/lib/
 
-MINGW32:=/usr/bin/i686-w64-mingw32-
+#MINGW32:=/usr/bin/i686-w64-mingw32-
+MINGW32:=i686-w64-mingw32-
 
 cnping.exe : cnping.c DrawFunctions.c WinDriver.c os_generic.c ping.c
 	$(MINGW32)windres resources.rc -o resources.o
