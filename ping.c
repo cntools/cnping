@@ -39,14 +39,15 @@
 void bzero(void *location,__LONG32 count);
 #else
 #pragma comment(lib, "Ws2_32.lib")
-void usleep(int x) {
-	Sleep(x / 1000);
-}
 void bzero(void * loc, int len)
 {
 	memset(loc, 0, len);
 }
 #endif
+
+void usleep(int x) {
+	Sleep(x / 1000);
+}
 
 #include <windows.h>
 #include <stdio.h>
