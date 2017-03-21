@@ -15,7 +15,7 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
-#include "DrawFunctions.h"
+#include "CNFGFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
 
@@ -92,6 +92,7 @@ void * PingSend( void * r )
 void HandleKey( int keycode, int bDown ){}
 void HandleButton( int x, int y, int button, int bDown ){}
 void HandleMotion( int x, int y, int mask ){}
+void HandleDestroy() { exit(0); }
 
 double GetGlobMaxPingTime( void )
 {
