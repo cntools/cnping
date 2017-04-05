@@ -358,7 +358,11 @@ void CNFGTackPoly( RDPoint * points, int verts )
 void CNFGInternalResize( short x, short y ) { }
 
 #else
+
+#if defined( RASTERIZER )
 #include "CNFGRasterizer.h"
+#endif
+
 #endif
 
 

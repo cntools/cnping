@@ -4,6 +4,9 @@ CFLAGS:=$(CFLAGS) -g -Os -I/opt/X11/include
 CXXFLAGS:=$(CFLAGS)
 LDFLAGS:=-g -L/opt/X11/lib/
 
+#CFLAGS:=$(CFLAGS) -DCNFGOGL
+#LDFLAGS:=$(LDFLAGS) -lGL
+
 #MINGW32:=/usr/bin/i686-w64-mingw32-
 MINGW32:=i686-w64-mingw32-
 
