@@ -15,7 +15,7 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
-#include "DrawFunctions.h"
+#include "CNFGFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
 
