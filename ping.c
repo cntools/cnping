@@ -99,7 +99,7 @@ void listener()
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		ERRM("Erro: could not set TTL option\n");
+		ERRM("Erro: could not set TTL option - did you forget to run as root or sticky bit cnping?\n");
 		exit( -1 );
 	}
 #endif
