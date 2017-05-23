@@ -29,7 +29,7 @@ int GuiYscaleFactorIsConstant;
 uint8_t pattern[8];
 
 
-#define PINGCYCLEWIDTH 2048
+#define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
 
 double PingSendTimes[PINGCYCLEWIDTH];
