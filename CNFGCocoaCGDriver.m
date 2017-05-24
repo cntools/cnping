@@ -113,12 +113,6 @@ void CNFGTackPoly( RDPoint * points, int verts )
     CGContextFillPath(bufferContext);
 }
 
-void CNFGGetDimensions( short * x, short * y )
-{
-    *x = app_sw;
-    *y = app_sh;
-}
-
 @interface MyView : NSView
 @end
 @implementation MyView
@@ -152,23 +146,16 @@ void CNFGGetDimensions( short * x, short * y )
 CGContextRef createBitmapContext (int pixelsWide,
                             int pixelsHigh)
 {
-    int             bitmapByteCount;
-    int             bitmapBytesPerRow;
+    int bitmapBytesPerRow   = (pixelsWide * 4);
  
-    bitmapBytesPerRow   = (pixelsWide * 4);
-    bitmapByteCount     = (bitmapBytesPerRow * pixelsHigh);
- 
-    colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
-    bufferData = calloc( bitmapByteCount, sizeof(uint8_t) );
-
-    CGContextRef context = CGBitmapContextCreate (bufferData,
+    CGContextRef context = CGBitmapContextCreate (NULL,
                                     pixelsWide,
                                     pixelsHigh,
                                     8,
                                     bitmapBytesPerRow,
                                     colorSpace,
                                     kCGImageAlphaNoneSkipLast);
-
+    bufferData = CGBitmapContextGetData(context);
     CGContextSetInterpolationQuality(context, kCGInterpolationNone);
     // CGContextSetShouldAntialias(context, NO);
     // CGContextSetLineWidth(context, 0.5);
@@ -191,6 +178,7 @@ void initApp(){
     [app_appMenu addItem:app_quitMenuItem];
     [app_appMenuItem setSubmenu:app_appMenu];
     app_imageView = [MyView new];
+    colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGBLinear);
 }
 
 void CNFGSetupFullscreen( const char * WindowName, int screen_number )
@@ -219,8 +207,15 @@ void CNFGSetup( const char * WindowName, int sw, int sh )
 
     initApp();
 
-    app_window = [[[NSWindow alloc] initWithContentRect:frameRect
-        styleMask:NSWindowStyleMaskBorderless | NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable backing:NSBackingStoreBuffered defer:NO]
+    app_window = [[[NSWindow alloc] 
+        initWithContentRect:frameRect
+        styleMask:
+                NSWindowStyleMaskBorderless | 
+                NSWindowStyleMaskResizable | 
+                NSWindowStyleMaskTitled | 
+                NSWindowStyleMaskClosable | 
+                NSWindowStyleMaskMiniaturizable 
+        backing:NSBackingStoreBuffered defer:NO]
             autorelease];
 
     NSString *title = [[[NSString alloc] initWithCString: WindowName encoding: NSUTF8StringEncoding] autorelease];
@@ -327,6 +322,22 @@ void CNFGHandleInput()
         [NSApp sendEvent:event];
     }
     [app_currDate release];
+}
+
+void CNFGGetDimensions( short * x, short * y )
+{
+    frameRect = [app_window frame];
+    CGSize app_imageSize = frameRect.size;
+    if (app_imageSize.width != app_sw || app_imageSize.height != app_sh)
+    {
+        app_sw = app_imageSize.width;
+        app_sh = app_imageSize.height;
+        if (bufferContext != NULL)
+            CGContextRelease(bufferContext);
+        bufferContext = createBitmapContext (app_sw, app_sh);
+    }
+    *x = app_sw;
+    *y = app_sh;
 }
 
 void CNFGClearFrame()
