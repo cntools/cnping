@@ -68,7 +68,7 @@ int precise_ping;
 struct packet
 {
 	struct icmphdr hdr;
-	char msg[PACKETSIZE-sizeof(struct icmphdr)];
+	unsigned char msg[PACKETSIZE-sizeof(struct icmphdr)];
 };
 
 int sd;
@@ -112,7 +112,7 @@ void listener()
 	for (;;)
 	{
 		int i;
-		int addrlenval=sizeof(addr);
+		socklen_t addrlenval=sizeof(addr);
 		int bytes; 
 
 #ifdef WIN32
@@ -174,7 +174,7 @@ void ping(struct sockaddr_in *addr )
 		pckt.hdr.type = ICMP_ECHO;
 		pckt.hdr.un.echo.id = pid;
 		pckt.hdr.un.echo.sequence = cnt++;
-		pckt.hdr.checksum = checksum(&pckt, sizeof( pckt.hdr ) + rsize );
+		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
 
 		if( sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
 		{
