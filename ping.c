@@ -18,7 +18,6 @@
 	#define ICMP_ECHO	8
 	#define IP_TTL		2
 	#define O_NONBLOCK   04000
-	void usleep(int x) { Sleep(x / 1000); }
 	#include <windows.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
@@ -36,7 +35,6 @@
 	#include <netinet/ip.h>
 	#include <netinet/ip_icmp.h>
 #endif
-
 #if defined WIN32 || defined __APPLE__
 struct icmphdr
 {
@@ -60,7 +58,7 @@ struct icmphdr
 };
 #endif
 
-float pingperiod;
+float pingperiodseconds;
 int precise_ping;
 
 #define PACKETSIZE	1500
@@ -99,8 +97,8 @@ void listener()
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		ERRM("Erro: could not set TTL option - did you forget to run as root or sticky bit cnping?\n");
-		exit( -1 );
+		ERRM("Error: could not set TTL option  - did you forget to run as root or sticky bit cnping?\n");
+			exit( -1 );
 	}
 #endif
 
@@ -132,7 +130,9 @@ void listener()
 		if ( bytes > 0 )
 			display(buf + 28, bytes - 28 );
 		else
-			ERRM( "recfrom failed." );
+    {
+			ERRM("Error: recvfrom failed");
+		}
 
 		goto keep_retry_quick;
 	}
@@ -187,19 +187,19 @@ void ping(struct sockaddr_in *addr )
 			do
 			{
 				ctime = OGGetAbsoluteTime();
-				if( pingperiod >= 1000 ) stime = ctime;
-			} while( ctime < stime + pingperiod );
-			stime += pingperiod;
+				if( pingperiodseconds >= 1000 ) stime = ctime;
+			} while( ctime < stime + pingperiodseconds );
+			stime += pingperiodseconds;
 		}
 		else
 		{
-			if( pingperiod > 0 )
+			if( pingperiodseconds > 0 )
 			{
-				uint32_t dlw = 1000000.0*pingperiod;
-				usleep( dlw );
+				uint32_t dlw = 1000000.0*pingperiodseconds;
+				OGUSleep( dlw );
 			}
 		}
-	} 	while( pingperiod >= 0 );
+	} 	while( pingperiodseconds >= 0 );
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
