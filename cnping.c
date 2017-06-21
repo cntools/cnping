@@ -6,6 +6,9 @@
 #include <errno.h>
 #include <string.h>
 #ifdef WIN32
+#ifdef _MSC_VER
+#define strdup _strdup
+#endif
 #include <windows.h>
 #else
 #include <sys/socket.h>
