@@ -18,6 +18,7 @@
 	#define ICMP_ECHO	8
 	#define IP_TTL		2
 	#define O_NONBLOCK   04000
+	#pragma comment(lib, "Ws2_32.lib")
 	#include <windows.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
