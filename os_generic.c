@@ -1,6 +1,5 @@
 #include "os_generic.h"
 
-
 #ifdef USE_WINDOWS
 
 #include <windows.h>
@@ -56,6 +55,7 @@ void * OGJoinThread( og_thread_t ot )
 {
 	WaitForSingleObject( ot, INFINITE );
 	CloseHandle( ot );
+	return 0;
 }
 
 void OGCancelThread( og_thread_t ot )

@@ -377,12 +377,12 @@ int main( int argc, const char ** argv )
 
 	if( argc > 2 )
 	{
-		pingperiod = atof( argv[2] );
-		printf( "Extra ping period: %f\n", pingperiod );
+		pingperiodseconds = atof( argv[2] );
+		printf( "Extra ping period: %f\n", pingperiodseconds );
 	}
 	else
 	{
-		pingperiod = 0.02;
+		pingperiodseconds = 0.02;
 	}
 
 	if( argc > 3 )

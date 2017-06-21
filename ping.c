@@ -45,10 +45,6 @@ void bzero(void * loc, int len)
 }
 #endif
 
-void usleep(int x) {
-	Sleep(x / 1000);
-}
-
 #include <windows.h>
 #include <stdio.h>
 #include <winsock2.h>
@@ -87,7 +83,7 @@ struct icmphdr {
 };
 #endif
 
-float pingperiod;
+float pingperiodseconds;
 int precise_ping;
 
 #define PACKETSIZE	1500
@@ -133,7 +129,7 @@ void listener(void)
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		ERRM("Erro: could not set TTL option\n");
+		ERRM("Error: could not set TTL option\n");
 			exit( -1 );
 	}
 
@@ -166,7 +162,9 @@ void listener(void)
 		if ( bytes > 0 )
 			display(buf + 28, bytes - 28 );
 		else
-			perror("recvfrom");
+		{
+			ERRM("Error: recvfrom failed");
+		}
 
 		goto keep_retry_quick;
 	}
@@ -219,7 +217,9 @@ void ping(struct sockaddr_in *addr )
 		pckt.hdr.checksum = checksum(&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize );
 
 		if ( sendto(sd, (char*)&pckt, sizeof(pckt) - sizeof( pckt.msg ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
-			perror("sendto");
+		{
+			ERRM("Sendto failed.");
+		}
 
 
 		if( precise_ping )
@@ -228,19 +228,19 @@ void ping(struct sockaddr_in *addr )
 			do
 			{
 				ctime = OGGetAbsoluteTime();
-				if( pingperiod >= 1000 ) stime = ctime;
-			} while( ctime < stime + pingperiod );
-			stime += pingperiod;
+				if( pingperiodseconds >= 1000 ) stime = ctime;
+			} while( ctime < stime + pingperiodseconds );
+			stime += pingperiodseconds;
 		}
 		else
 		{
-			if( pingperiod > 0 )
+			if( pingperiodseconds > 0 )
 			{
-				uint32_t dlw = 1000000.0*pingperiod;
-				usleep( dlw );
+				uint32_t dlw = 1000000.0*pingperiodseconds;
+				OGUSleep( dlw );
 			}
 		}
-	} 	while( pingperiod >= 0 );
+	} 	while( pingperiodseconds >= 0 );
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
