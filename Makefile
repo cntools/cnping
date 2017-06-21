@@ -20,6 +20,12 @@ cnping : cnping.o CNFGFunctions.o CNFGXDriver.o os_generic.o ping.o
 cnping-mousey : cnping-mousey.o CNFGFunctions.o CNFGXDriver.o os_generic.o ping.o
 	gcc $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS) 
 
+cnping_mac : cnping.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c
+	gcc -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
+
+cnping-mousey_mac : cnping-mousey.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c
+	gcc -o cnping-mousey $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
+
 searchnet : os_generic.o ping.o searchnet.o
 	gcc $(CFLAGS) -o $@ $^ -lpthread
 
