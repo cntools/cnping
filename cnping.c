@@ -218,12 +218,15 @@ void DrawFrame( void )
 
 	char stbuf[1024];
 	char * sptr = &stbuf[0];
-	sptr += sprintf( sptr, "Last: %5.2f ms\n", last );
-	sptr += sprintf( sptr, "Min : %5.2f ms\n", mintime );
-	sptr += sprintf( sptr, "Max : %5.2f ms\n", maxtime );
-	sptr += sprintf( sptr, "Avg : %5.2f ms\n", avg );
-	sptr += sprintf( sptr, "Std : %5.2f ms\n", stddev );
-	sptr += sprintf( sptr, "Loss: %5.1f %%\n", loss );
+
+	sptr += sprintf( sptr, 
+		"Last: %5.2f ms\n"
+		"Min : %5.2f ms\n"
+		"Max : %5.2f ms\n"
+		"Avg : %5.2f ms\n"
+		"Std : %5.2f ms\n"
+		"Loss: %5.1f %%\n", last, mintime, maxtime, avg, stddev, loss );
+
 	CNFGColor( 0x00 );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
 	{
@@ -241,21 +244,11 @@ void DrawFrame( void )
 const char * glargv[10];
 int glargc = 0;
 
-INT_PTR CALLBACK TextEntry( HWND   hwndDlg,
-	UINT   uMsg,
-	WPARAM wParam,
-	LPARAM lParam )
+INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM lParam )
 {
 
-//	printf( "%d %d %d\n", uMsg, wParam, lParam );
 	switch( uMsg )
 	{
-	//case IDC_SAVESETS:
-	//	GetDlgItemText(DLG_SETS, IDC_SETS1, stringVariable, sizeof(stringVariable));
-//	case 31:
-//		printf( "Exit\n" );
-//		exit( 0 );
-//		return 0;
 	case WM_INITDIALOG:
 		SetDlgItemText(hwndDlg, 4, "0.02");
 		SetDlgItemText(hwndDlg, 5, "0" );
@@ -298,19 +291,11 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg,
 						}
 					}
 				}
-
-//				printf( "+++%s\n", stringVariable );
-//				printf( "Commit %p/%d\n", lParam, id );
 				EndDialog(hwndDlg, 0);
 				return 0; //User pressed enter.
 			}
 		}
-
-//case IDC_SAVESETS:  http://www.cplusplus.com/forum/beginner/19843/
-//GetDlgItemText(DLG_SETS, IDC_SETS1, stringVariable, sizeof(stringVariable));
-
-		//printf( "cmd %p %p %p\n", uMsg, wParam, lParam );
-		return 0;
+/*		return 0;
 	case WM_CTLCOLORBTN:
 		//printf( "ctr %p %p %p\n", uMsg, wParam, lParam );
 		//return 0;
@@ -319,15 +304,12 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg,
 	case 8: case 312: case 15: case 71: case 133: case 307:
 	case 20: case 310: case 33:
 		return 0;
+*/
 	}
-	//MessageBox( 0, "XXX", "cnping", 0 );
-	//printf( "XXX %d %d %d\n", uMsg, wParam, lParam );
 	return 0;
 }
-int mymain( int argc, const char ** argv )
-#else
-int main( int argc, const char ** argv )
 #endif
+int main( int argc, const char ** argv )
 {
 	char title[1024];
 	int i, x, y, r;
@@ -339,6 +321,10 @@ int main( int argc, const char ** argv )
 //	struct in_addr dst;
 	struct addrinfo *result;
 
+#ifdef WIN32
+	ShowWindow (GetConsoleWindow(), SW_HIDE);
+#endif
+
 	srand( (int)(OGGetAbsoluteTime()*100000) );
 
 	for( i = 0; i < sizeof( pattern ); i++ )
@@ -347,12 +333,6 @@ int main( int argc, const char ** argv )
 	}
 	CNFGBGColor = 0x800000;
 	CNFGDialogColor = 0x444444;
-	for( i = 0; i < PINGCYCLEWIDTH; i++ )
-	{
-		PingSendTimes[i] = 0;
-		PingRecvTimes[i] = 0;
-	}
-
 #ifdef WIN32
 	if( argc < 2 )
 	{
@@ -377,36 +357,13 @@ int main( int argc, const char ** argv )
 		return -1;
 	}
 
-
-	if( argc > 2 )
-	{
-		pingperiodseconds = atof( argv[2] );
-		printf( "Extra ping period: %f\n", pingperiodseconds );
-	}
-	else
-	{
-		pingperiodseconds = 0.02;
-	}
-
-	if( argc > 3 )
-	{
-		ExtraPingSize = atoi( argv[3] );
-		printf( "Extra ping size:   %d\n", ExtraPingSize );
-	}
-	else
-	{
-		ExtraPingSize = 0;
-	}
+	float pingperiod = (argc > 2)?atof( argv[2] ):0.02;
+	ExtraPingSize = (argc > 3)?atoi( argv[3] ):0;
 
 	if( argc > 4 )
 	{
 		GuiYScaleFactor = atof( argv[4] );
 		GuiYscaleFactorIsConstant = 1;
-		printf( "GuiYScaleFactor:   %f\n", GuiYScaleFactor );
-	}
-	else
-	{
-		printf( "GuiYScaleFactor:   %s\n", "dynamic" );
 	}
 
 	pinghost = argv[1];
@@ -454,107 +411,3 @@ int main( int argc, const char ** argv )
 	return(0);
 }
 
-#ifdef WIN32
-
-//from: http://alter.org.ua/docs/win/args/
- PCHAR*
-    CommandLineToArgvA(
-        PCHAR CmdLine,
-        int* _argc
-        )
-    {
-        PCHAR* argv;
-        PCHAR  _argv;
-        ULONG   len;
-        ULONG   argc;
-        CHAR   a;
-        ULONG   i, j;
-
-        BOOLEAN  in_QM;
-        BOOLEAN  in_TEXT;
-        BOOLEAN  in_SPACE;
-
-        len = strlen(CmdLine);
-        i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
-
-        argv = (PCHAR*)GlobalAlloc(GMEM_FIXED,
-            i + (len+2)*sizeof(CHAR));
-
-        _argv = (PCHAR)(((PUCHAR)argv)+i);
-
-        argc = 0;
-        argv[argc] = _argv;
-        in_QM = FALSE;
-        in_TEXT = FALSE;
-        in_SPACE = TRUE;
-        i = 0;
-        j = 0;
-
-        while( a = CmdLine[i] ) {
-            if(in_QM) {
-                if(a == '\"') {
-                    in_QM = FALSE;
-                } else {
-                    _argv[j] = a;
-                    j++;
-                }
-            } else {
-                switch(a) {
-                case '\"':
-                    in_QM = TRUE;
-                    in_TEXT = TRUE;
-                    if(in_SPACE) {
-                        argv[argc] = _argv+j;
-                        argc++;
-                    }
-                    in_SPACE = FALSE;
-                    break;
-                case ' ':
-                case '\t':
-                case '\n':
-                case '\r':
-                    if(in_TEXT) {
-                        _argv[j] = '\0';
-                        j++;
-                    }
-                    in_TEXT = FALSE;
-                    in_SPACE = TRUE;
-                    break;
-                default:
-                    in_TEXT = TRUE;
-                    if(in_SPACE) {
-                        argv[argc] = _argv+j;
-                        argc++;
-                    }
-                    _argv[j] = a;
-                    j++;
-                    in_SPACE = FALSE;
-                    break;
-                }
-            }
-            i++;
-        }
-        _argv[j] = '\0';
-        argv[argc] = NULL;
-
-        (*_argc) = argc;
-        return argv;
-    }
-
-
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-	int argc;
-	char cts[8192];
-	sprintf( cts, "%s %s", GetCommandLine(), lpCmdLine );
-
-	ShowWindow (GetConsoleWindow(), SW_HIDE);
-	char ** argv = CommandLineToArgvA(
-        cts,
-        &argc
-        );
-//	MessageBox( 0, argv[1], "X", 0 );
-	return mymain( argc-1, (const char**)argv );
-}
-
-#endif

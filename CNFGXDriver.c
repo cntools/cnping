@@ -251,7 +251,8 @@ void CNFGHandleInput()
 			exit( 0 );
 			break;
 		default:
-			printf( "Event: %d\n", report.type );
+			//printf( "Event: %d\n", report.type );
+			break;
 		}
 	}
 }
