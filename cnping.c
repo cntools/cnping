@@ -67,6 +67,11 @@ int load_ping_packet( uint8_t * buffer, int bufflen )
 
 	memcpy( buffer+4, pattern, 8 );
 
+	if( ping_failed_to_send )
+	{
+		PingSendTimes[(current_cycle+PINGCYCLEWIDTH-1)&(PINGCYCLEWIDTH-1)] = 0; //Unset ping send.
+	}
+
 	PingSendTimes[current_cycle&(PINGCYCLEWIDTH-1)] = OGGetAbsoluteTime();
 	PingRecvTimes[current_cycle&(PINGCYCLEWIDTH-1)] = 0;
 
@@ -162,7 +167,7 @@ void DrawFrame( void )
 			CNFGColor( 0xff );
 			dt = now - st;
 			dt *= 1000;
-			totalcountloss++;
+			if( i != 0 ) totalcountloss++;
 		}
 		else // no ping sent for this point in time (after startup)
 		{
@@ -225,7 +230,7 @@ void DrawFrame( void )
 		"Max : %5.2f ms\n"
 		"Avg : %5.2f ms\n"
 		"Std : %5.2f ms\n"
-		"Loss: %5.1f %%\n", last, mintime, maxtime, avg, stddev, loss );
+		"Loss: %5.1f %%\n\n%s", last, mintime, maxtime, avg, stddev, loss, (ping_failed_to_send?"Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?":"") );
 
 	CNFGColor( 0x00 );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
@@ -312,14 +317,11 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 int main( int argc, const char ** argv )
 {
 	char title[1024];
-	int i, x, y, r;
+	int i;
 	double ThisTime;
 	double LastFPSTime = OGGetAbsoluteTime();
 	double LastFrameTime = OGGetAbsoluteTime();
 	double SecToWait;
-	int linesegs = 0;
-//	struct in_addr dst;
-	struct addrinfo *result;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -336,7 +338,7 @@ int main( int argc, const char ** argv )
 #ifdef WIN32
 	if( argc < 2 )
 	{
-		int ret = DialogBox(0, "IPDialog", 0, TextEntry );
+		DialogBox(0, "IPDialog", 0, TextEntry );
 		argc = glargc;
 		argv = glargv;
 	}
@@ -357,7 +359,7 @@ int main( int argc, const char ** argv )
 		return -1;
 	}
 
-	float pingperiod = (argc > 2)?atof( argv[2] ):0.02;
+	pingperiodseconds = (argc > 2)?atof( argv[2] ):0.02;
 	ExtraPingSize = (argc > 3)?atoi( argv[3] ):0;
 
 	if( argc > 4 )
@@ -378,11 +380,7 @@ int main( int argc, const char ** argv )
 
 	while(1)
 	{
-		int i, pos;
-		float f;
 		iframeno++;
-		RDPoint pto[3];
-
 		CNFGHandleInput();
 
 		CNFGClearFrame();
@@ -398,7 +396,6 @@ int main( int argc, const char ** argv )
 		if( ThisTime > LastFPSTime + 1 )
 		{
 			frames = 0;
-			linesegs = 0;
 			LastFPSTime+=1;
 		}
 

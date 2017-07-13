@@ -72,6 +72,7 @@ struct packet
 
 int sd;
 int pid=-1;
+int ping_failed_to_send;
 struct sockaddr_in psaddr;
 
 uint16_t checksum( const unsigned char * start, uint16_t len )
@@ -110,7 +111,6 @@ void listener()
 #endif
 	for (;;)
 	{
-		int i;
 		socklen_t addrlenval=sizeof(addr);
 		int bytes; 
 
@@ -167,7 +167,6 @@ void ping(struct sockaddr_in *addr )
 	struct packet pckt;
 	do
 	{
-		int len = sizeof(r_addr);
 		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
 		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
 
@@ -177,9 +176,15 @@ void ping(struct sockaddr_in *addr )
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
 
-		if( sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr)) <= 0 )
+		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr));
+
+		if( sr <= 0 )
 		{
-			ERRM("Fail on sendto.");
+			ping_failed_to_send = 1;
+		}
+		else
+		{
+			ping_failed_to_send = 0;
 		}
 
 		if( precise_ping )
@@ -235,7 +240,7 @@ void ping_setup()
 
 	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
 	{
-		ERRM("Error: Failed to set TTL option\n");
+		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
 		exit( -1 );
 	}
 
