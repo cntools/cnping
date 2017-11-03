@@ -62,7 +62,7 @@ struct icmphdr
 float pingperiodseconds;
 int precise_ping;
 
-#define PACKETSIZE	1500
+#define PACKETSIZE	16384
 
 struct packet
 {
@@ -105,7 +105,7 @@ void listener()
 #endif
 
 	struct sockaddr_in addr;
-	unsigned char buf[8192];
+	unsigned char buf[17000];
 #ifdef WIN32
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
