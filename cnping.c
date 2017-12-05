@@ -349,12 +349,13 @@ int main( int argc, const char ** argv )
 #ifdef WIN32
 		ERRM( "Need at least a host address to ping.\n" );
 #else
-		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling]\n"
+		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
 
 			  "   [host]                 -- domain or IP address of ping target \n"
 			  "   [period]               -- period in seconds (optional), default 0.02 \n"
 			  "   [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
-			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n");
+			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
+			  "   [window title]         -- the title of the window (optional)\n");
 #endif
 		return -1;
 	}
@@ -370,7 +371,15 @@ int main( int argc, const char ** argv )
 
 	pinghost = argv[1];
 
-	sprintf( title, "%s - cnping", pinghost );
+	if (argc > 5)
+	{
+		sprintf(title, "%s", argv[5]);
+	}
+	else
+	{
+		sprintf( title, "%s - cnping", pinghost );
+	}
+
 	CNFGSetup( title, 320, 155 );
 
 	ping_setup();
