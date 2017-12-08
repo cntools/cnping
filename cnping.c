@@ -5,6 +5,7 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <argp.h>
 #ifdef WIN32
 #ifdef _MSC_VER
 #define strdup _strdup
@@ -21,6 +22,73 @@
 #include "CNFGFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
+
+
+const char *argp_program_version = "cnping";
+const char *argp_program_bug_address = "https://github.com/cnlohr/cnping";
+const char doc[] = "\ncnping -- Minimal Graphical IPV4 Ping Tool.";
+
+static char args_doc[] = "HOST";
+
+static struct argp_option options[] = {
+	{"period",	'p', "PERIOD", 0, "Period in seconds (optional), default 0.02", 1},
+	{"extra-size",	'x', "SIZE", 0, "Ping packet extra size (above 12), optional, default = 0", 2},
+	{"scale",	's', "SCALE", 0, "Use fixed scaling factor instead of auto scaling", 3},
+	{"title", 	't', "TITLE", 0, "The window title", 4},
+	{0}
+};
+
+struct arguments
+{
+	char *host;
+	float period;
+	int extrasize;
+	float scale;
+	int  constantscale;
+	char *title;
+};
+
+static error_t parse_opt (int key, char *arg, struct argp_state *state)
+{
+	struct arguments *arguments	= state->input;
+
+	switch(key)
+	{
+		case ARGP_KEY_ARG:
+			if (state->arg_num > 1)
+				argp_usage(state);
+			arguments->host = arg;
+			break;
+		case ARGP_KEY_END:
+			if (state->arg_num<1)
+				argp_usage(state);
+			break;
+		case 'p':
+			arguments->period = atof(arg);
+			if (!arguments->period) 
+				return EBADMSG;
+			break;
+		case 'x':
+			arguments->extrasize = atoi(arg);
+			if (arguments->extrasize < 12)
+				return EBADMSG;
+			break;
+		case 's':
+			arguments->scale = atof(arg);
+			if (!arguments->scale)
+				return EBADMSG;
+			arguments->constantscale = 1;
+			break;
+		case 't':
+			arguments->title = arg;
+			break;
+		default:
+			return ARGP_ERR_UNKNOWN;
+	}
+	return 0;
+}
+
+static struct argp argp = {options, parse_opt, args_doc, doc};
 
 unsigned frames = 0;
 unsigned long iframeno = 0;
@@ -323,7 +391,7 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 	return 0;
 }
 #endif
-int main( int argc, const char ** argv )
+int main( int argc, char ** argv )
 {
 	char title[1024];
 	int i;
@@ -331,6 +399,23 @@ int main( int argc, const char ** argv )
 	double LastFPSTime = OGGetAbsoluteTime();
 	double LastFrameTime = OGGetAbsoluteTime();
 	double SecToWait;
+
+	struct arguments arguments;
+
+	arguments.host = NULL;
+	arguments.period = 0.02;
+	arguments.extrasize = 12;
+	arguments.scale = 1;
+	arguments.constantscale = 0;
+	arguments.title = NULL;
+
+	int e = argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+	if (e)
+	{
+		fprintf (stderr, "%s:ERROR; %s\n", argv[0], strerror(e));
+		exit(EXIT_FAILURE);
+	}
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -351,23 +436,6 @@ int main( int argc, const char ** argv )
 		argc = glargc;
 		argv = glargv;
 	}
-#endif
-
-	if( argc < 2 )
-	{
-#ifdef WIN32
-		ERRM( "Need at least a host address to ping.\n" );
-#else
-		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
-
-			  "   [host]                 -- domain or IP address of ping target \n"
-			  "   [period]               -- period in seconds (optional), default 0.02 \n"
-			  "   [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
-			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
-			  "   [window title]         -- the title of the window (optional)\n");
-#endif
-		return -1;
-	}
 
 	pingperiodseconds = (argc > 2)?atof( argv[2] ):0.02;
 	ExtraPingSize = (argc > 3)?atoi( argv[3] ):0;
@@ -380,14 +448,21 @@ int main( int argc, const char ** argv )
 
 	pinghost = argv[1];
 
-	if (argc > 5)
-	{
-		sprintf(title, "%s", argv[5]);
-	}
+	sprintf( title, "%s - cnping", pinghost );
+#endif
+
+	pingperiodseconds = arguments.period;
+	ExtraPingSize = arguments.extrasize;
+
+	GuiYScaleFactor = arguments.scale;
+	GuiYscaleFactorIsConstant = arguments.constantscale;
+
+	pinghost = arguments.host;
+
+	if (!arguments.title)
+		sprintf( title, "%s - cnping", pinghost);
 	else
-	{
-		sprintf( title, "%s - cnping", pinghost );
-	}
+		sprintf( title, "%s", arguments.title);
 
 	CNFGSetup( title, 320, 155 );
 

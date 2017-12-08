@@ -3,13 +3,23 @@ cnping
 
 Minimal Graphical IPV4 Ping Tool.  (also comes with searchnet, like nmap but smaller and simpler).  It uses rawdraw so it is OS independent.
 ```
-Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]
+Usage: cnping [OPTION...] HOST
 
-	 [host]                 -- domain or IP address of ping target
-	 [period]               -- period in seconds (optional), default 0.02
-	 [extra size]           -- ping packet extra size (above 12), optional, default = 0
-	 [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)
-	 [window title]         -- the title of the window (optional)
+cnping -- Minimal Graphical IPV4 Ping Tool.
+
+  -p, --period=PERIOD        Period in seconds (optional), default 0.02
+  -x, --extra-size=SIZE      Ping packet extra size (above 12), optional,
+                             default = 0
+  -s, --scale=SCALE          Use fixed scaling factor instead of auto scaling
+  -t, --title=TITLE          The window title
+  -?, --help                 Give this help list
+      --usage                Give a short usage message
+  -V, --version              Print program version
+
+Mandatory or optional arguments to long options are also mandatory or optional
+for any corresponding short options.
+
+Report bugs to https://github.com/cnlohr/cnping.
 ```
 Picture:
 
