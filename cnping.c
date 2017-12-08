@@ -31,12 +31,10 @@ const char doc[] = "\ncnping -- Minimal Graphical IPV4 Ping Tool.";
 static char args_doc[] = "HOST";
 
 static struct argp_option options[] = {
-	/* {"host",	'h', 0, 0, "domain or IP address of ping target"}, */
-	/* {"target",	't', 0, OPTION_ALIAS}, */
-	{"period",	'p', 0, OPTION_ARG_OPTIONAL, "period in seconds (optional), default 0.02"},
-	{"extra-size",	'x', 0, OPTION_ARG_OPTIONAL, "ping packet extra size (above 12), optional, default = 0"},
-	{"scale",	's', 0, OPTION_ARG_OPTIONAL, "use a fixed scaling factor instead of auto scaling"},
-	{"title", 't', 0, OPTION_ARG_OPTIONAL, "the window title"},
+	{"period",	'p', "PERIOD", 0, "Period in seconds (optional), default 0.02", 1},
+	{"extra-size",	'x', "SIZE", 0, "Ping packet extra size (above 12), optional, default = 0", 2},
+	{"scale",	's', "SCALE", 0, "Use fixed scaling factor instead of auto scaling", 3},
+	{"title", 	't', "TITLE", 0, "The window title", 4},
 	{0}
 };
 
@@ -46,6 +44,7 @@ struct arguments
 	float period;
 	int extrasize;
 	float scale;
+	int  constantscale;
 	char *title;
 };
 
@@ -66,12 +65,19 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state)
 			break;
 		case 'p':
 			arguments->period = atof(arg);
+			if (!arguments->period) 
+				return EBADMSG;
 			break;
 		case 'x':
 			arguments->extrasize = atoi(arg);
+			if (arguments->extrasize < 12)
+				return EBADMSG;
 			break;
 		case 's':
 			arguments->scale = atof(arg);
+			if (!arguments->scale)
+				return EBADMSG;
+			arguments->constantscale = 1;
 			break;
 		case 't':
 			arguments->title = arg;
@@ -387,7 +393,7 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 #endif
 int main( int argc, char ** argv )
 {
-	char title[1024] = "cnping";
+	char title[1024];
 	int i;
 	double ThisTime;
 	double LastFPSTime = OGGetAbsoluteTime();
@@ -400,15 +406,16 @@ int main( int argc, char ** argv )
 	arguments.period = 0.02;
 	arguments.extrasize = 12;
 	arguments.scale = 1;
+	arguments.constantscale = 0;
 	arguments.title = NULL;
 
-	argp_parse(&argp, argc, argv, 0, 0, &arguments);
+	int e = argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-	printf("arguments.host = %s\n", arguments.host);
-	printf("arguments.period = %f\n", arguments.period);
-	printf("arguments.extrasize = %d\n", arguments.extrasize);
-	printf("arguments.scale = %f\n", arguments.scale);
-	printf("arguments.title = %s\n", arguments.title);
+	if (e)
+	{
+		fprintf (stderr, "%s:ERROR; %s\n", argv[0], strerror(e));
+		exit(EXIT_FAILURE);
+	}
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -444,32 +451,18 @@ int main( int argc, char ** argv )
 	sprintf( title, "%s - cnping", pinghost );
 #endif
 
-	/* pingperiodseconds = (argc > 2)?atof( argv[2] ):0.02; */
-	//TODO
 	pingperiodseconds = arguments.period;
-	/* ExtraPingSize = (argc > 3)?atoi( argv[3] ):0; */
-	//TODO
 	ExtraPingSize = arguments.extrasize;
 
-	/* if( argc > 4 ) */
-	/* { */
-	/* 	GuiYScaleFactor = atof( argv[4] ); */
-	/* 	GuiYscaleFactorIsConstant = 1; */
-	/* } */
-	//TODO
 	GuiYScaleFactor = arguments.scale;
-	/* GuiYscaleFactorIsConstant = 1; */
+	GuiYscaleFactorIsConstant = arguments.constantscale;
 
-	/* pinghost = argv[1]; */
-	//TODO
 	pinghost = arguments.host;
 
-	/* sprintf( title, "%s - cnping", pinghost ); */
-	//TODO
-	if (arguments.host)
+	if (!arguments.title)
 		sprintf( title, "%s - cnping", pinghost);
 	else
-		sprintf( title, "%s", arguments.host);
+		sprintf( title, "%s", arguments.title);
 
 	CNFGSetup( title, 320, 155 );
 
