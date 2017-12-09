@@ -352,43 +352,83 @@ int main( int argc, const char ** argv )
 		argv = glargv;
 	}
 #endif
+	pingperiodseconds = 0.02;
+	ExtraPingSize = 0;
+	title[0] = 0;
+	GuiYScaleFactor = 0;
+  
+	//We need to process all the unmarked parameters.
+	int argcunmarked = 1;
+	int displayhelp = 0;
 
-	if( argc < 2 )
+	for( i = 1; i < argc; i++ )
 	{
-#ifdef WIN32
-		ERRM( "Need at least a host address to ping.\n" );
-#else
-		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
-
-			  "   [host]                 -- domain or IP address of ping target \n"
-			  "   [period]               -- period in seconds (optional), default 0.02 \n"
-			  "   [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
-			  "   [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
-			  "   [window title]         -- the title of the window (optional)\n");
-#endif
-		return -1;
+		const char * thisargv = argv[i];
+		if( thisargv[0] == '-' )
+		{
+			int np = ++i;
+			if( np >= argc )
+			{
+				displayhelp = 1;
+				break;
+			}
+			const char * nextargv = argv[np];
+			//Parameter-based field.
+			switch( thisargv[1] )
+			{
+				case 'h': pinghost = nextargv; break;
+				case 'p': pingperiodseconds = atof( nextargv ); break;
+				case 's': ExtraPingSize = atoi( nextargv ); break;
+				case 'y': GuiYScaleFactor = atof( nextargv ); break;
+				case 't': sprintf(title, "%s", nextargv); break;
+				default: displayhelp = 1; break;
+			}
+		}
+		else
+		{
+			//Unmarked fields
+			switch( argcunmarked++ )
+			{
+				case 1: pinghost = thisargv; break;
+				case 2: pingperiodseconds = atof( thisargv ); break;
+				case 3: ExtraPingSize = atoi( thisargv ); break;
+				case 4: GuiYScaleFactor = atof( thisargv ); break;
+				case 5: sprintf(title, "%s", thisargv ); break;
+				default: displayhelp = 1;
+			}
+		}
 	}
 
-	pingperiodseconds = (argc > 2)?atof( argv[2] ):0.02;
-	ExtraPingSize = (argc > 3)?atoi( argv[3] ):0;
-
-	if( argc > 4 )
-	{
-		GuiYScaleFactor = atof( argv[4] );
-		GuiYscaleFactorIsConstant = 1;
-	}
-
-	pinghost = argv[1];
-
-	if (argc > 5)
-	{
-		sprintf(title, "%s", argv[5]);
-	}
-	else
+	if( title[0] == 0 )
 	{
 		sprintf( title, "%s - cnping", pinghost );
 	}
 
+	if( GuiYScaleFactor > 0 )
+	{
+		GuiYscaleFactorIsConstant = 1;
+	}
+
+	if( !pinghost )
+	{
+		displayhelp = 1;
+	}
+
+	if( displayhelp )
+	{
+		#ifdef WIN32
+		ERRM( "Need at least a host address to ping.\n" );
+		#else
+		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
+			"   (-h) [host]                 -- domain or IP address of ping target \n"
+			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
+			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
+			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
+			"   (-t) [window title]         -- the title of the window (optional)\n");
+		#endif
+		return -1;
+	}
+ 
 	CNFGSetup( title, 320, 155 );
 
 	ping_setup();
