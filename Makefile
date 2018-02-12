@@ -33,7 +33,8 @@ linuxinstall : cnping
 	sudo rm -f /usr/local/bin/cnping
 	sudo cp cnping /usr/local/bin/
 	sudo setcap cap_net_raw+ep /usr/local/bin/cnping
-#	sudo chmod +t /usr/local/bin/cnping
+#	sudo chmod +t /usr/local/bin/cnping  #One option - set the stuid bit.
+#	sudo install cnping /usr/local/bin/  #Another option - using install.
 
 clean : 
 	rm -rf *.o *~ cnping cnping.exe cnping-mousey searchnet
