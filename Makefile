@@ -30,6 +30,7 @@ searchnet : os_generic.o ping.o searchnet.o
 	gcc $(CFLAGS) -o $@ $^ -lpthread
 
 linuxinstall : cnping
+	sudo rm -f /usr/local/bin/cnping
 	sudo cp cnping /usr/local/bin/
 	sudo setcap cap_net_raw+ep /usr/local/bin/cnping
 
