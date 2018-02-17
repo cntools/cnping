@@ -24,20 +24,6 @@ extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only ap
 extern int ping_failed_to_send;
 void ping_setup();
 
-#ifdef WIN32
-
-extern char errbuffer[1024];
-#ifndef _MSC_VER
-#define ERRM(x...) { sprintf( errbuffer, x ); MessageBox( 0, errbuffer, "cnping", 0 ); }
-#else
-#define ERRM(...) { sprintf( errbuffer, __VA_ARGS__ ); MessageBox( 0, errbuffer, "cnping", 0 ); }
-#endif
-
-#else
-
-#define ERRM(x...) fprintf( stderr, x );
-
-#endif
 
 #endif
 

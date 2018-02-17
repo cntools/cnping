@@ -18,6 +18,7 @@
 #include "CNFGFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
+#include "error_handling.h"
 
 unsigned frames = 0;
 unsigned long iframeno = 0;

@@ -21,6 +21,8 @@
 #include "CNFGFunctions.h"
 #include "os_generic.h"
 #include "ping.h"
+#include "error_handling.h"
+#include "httping.h"
 
 unsigned frames = 0;
 unsigned long iframeno = 0;
@@ -40,6 +42,20 @@ double PingRecvTimes[PINGCYCLEWIDTH];
 int current_cycle = 0;
 
 int ExtraPingSize;
+
+
+void HTTPingCallbackStart( int seqno )
+{
+	current_cycle = seqno;
+
+	PingSendTimes[seqno] = OGGetAbsoluteTime();
+	PingRecvTimes[seqno] = 0;
+}
+
+void HTTPingCallbackGot( int seqno )
+{
+	PingRecvTimes[seqno] = OGGetAbsoluteTime();
+}
 
 void display(uint8_t *buf, int bytes)
 {
@@ -420,7 +436,7 @@ int main( int argc, const char ** argv )
 		ERRM( "Need at least a host address to ping.\n" );
 		#else
 		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
-			"   (-h) [host]                 -- domain or IP address of ping target \n"
+			"   (-h) [host]                 -- domain, IP address of ping target for ICMP or http host, i.e. http://google.com\n"
 			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
@@ -431,10 +447,16 @@ int main( int argc, const char ** argv )
  
 	CNFGSetup( title, 320, 155 );
 
-	ping_setup();
-
-	OGCreateThread( PingSend, 0 );
-	OGCreateThread( PingListen, 0 );
+	if( memcmp( pinghost, "http://", 7 ) == 0 )
+	{
+		StartHTTPing( pinghost+7, pingperiodseconds );
+	}
+	else
+	{
+		ping_setup();
+		OGCreateThread( PingSend, 0 );
+		OGCreateThread( PingListen, 0 );
+	}
 
 	while(1)
 	{

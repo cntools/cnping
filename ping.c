@@ -11,6 +11,9 @@
 #include "ping.h"
 #include "os_generic.h"
 
+
+#include "error_handling.h"
+
 #ifdef WIN32
 	#include <winsock2.h>
 	#define SOL_IP		0
