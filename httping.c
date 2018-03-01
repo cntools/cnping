@@ -76,7 +76,7 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	/* build the server's Internet address */
 	bzero((char *) &serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
-	memcpy((char *)server->h_addr, (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
 	serveraddr.sin_port = htons(portno);
 
 	/* connect: create a connection with the server */
