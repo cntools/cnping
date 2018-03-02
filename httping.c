@@ -36,6 +36,7 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	int httpsock;
 	int addylen = strlen(addy);
 	char hostname[addylen+1];
+	memcpy( hostname, addy, addylen + 1 );
 	char * eportmarker = strchr( hostname, ':' );
 	char * eurl = strchr( hostname, '/' );
 
@@ -43,8 +44,6 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 
 	(*seqnoptr) ++;
 	HTTPingCallbackStart( *seqnoptr );
-
-	memcpy( hostname, addy, addylen + 1 );
 
 	if( eportmarker )
 	{
