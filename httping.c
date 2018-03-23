@@ -33,7 +33,7 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 {
 	struct sockaddr_in serveraddr;
 	struct hostent *server;
-	int httpsock = 0;
+	int httpsock;
 	int addylen = strlen(addy);
 	char hostname[addylen+1];
 	memcpy( hostname, addy, addylen + 1 );
@@ -70,27 +70,24 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	serveraddr.sin_family = AF_INET;
 	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
 	serveraddr.sin_port = htons(portno);
+	
+reconnect:
+	*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
+	if (httpsock < 0)
+	{
+		ERRM( "Error opening socket\n" );
+		return;
+	}
+
+	/* connect: create a connection with the server */
+	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
+	{
+		ERRM( "%s: ERROR connecting\n", hostname );
+		goto fail;
+	}
 
 	while( 1 )
 	{
-		if( !httpsock )
-		{
-			*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
-			if (httpsock < 0)
-			{
-				ERRM( "Error opening socket\n" );
-				return;
-			}
-
-			/* connect: create a connection with the server */
-			if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
-			{
-				ERRM( "%s: ERROR connecting\n", hostname );
-				goto fail;
-			}
-		}
-
-
 		char buf[8192];
 
 		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\n\r\n", eurl?eurl:"/favicon.ico" );
@@ -135,7 +132,7 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 #else
 			close( httpsock );
 #endif
-			*socketptr = httpsock = 0;
+			goto reconnect;
 		}
 	}
 fail:
