@@ -56,13 +56,6 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 			*eurl = 0;
 	}
 
-	*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
-	if (httpsock < 0)
-	{
-		ERRM( "Error opening socket\n" );
-		return;
-	}
-
 	/* gethostbyname: get the server's DNS entry */
 	*getting_host_by_name = 1;
 	server = gethostbyname(hostname);
@@ -77,6 +70,14 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	serveraddr.sin_family = AF_INET;
 	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
 	serveraddr.sin_port = htons(portno);
+	
+reconnect:
+	*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
+	if (httpsock < 0)
+	{
+		ERRM( "Error opening socket\n" );
+		return;
+	}
 
 	/* connect: create a connection with the server */
 	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
@@ -84,7 +85,6 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 		ERRM( "%s: ERROR connecting\n", hostname );
 		goto fail;
 	}
-
 
 	while( 1 )
 	{
@@ -98,8 +98,12 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 		int breakout = 0;
 		while( !breakout )
 		{
-			n = read( httpsock, buf, sizeof(buf)-1 );
+			n = recv( httpsock, buf, sizeof(buf)-1, MSG_PEEK);
+			if( n > 0 ) n = read( httpsock, buf, sizeof(buf)-1);
+			else if( n == 0 ) break; //FIN received
+			
 			if( n < 0 ) return;
+			
 			int i;
 			for( i = 0; i < n; i++ )
 			{
@@ -109,11 +113,10 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 				case 0: if( c == '\r' ) endstate++; break;
 				case 1: if( c == '\n' ) endstate++; else endstate = 0; break;
 				case 2: if( c == '\r' ) endstate++; else endstate = 0; break;
-				case 3: if( c == '\n' ) breakout = 1; else endstate = 0; break;
+				case 3: if( c == '\n' && i == n-1) breakout = 1; else endstate = 0; break;
 				}
 			}
 		}
-
 		*timeouttime = OGGetAbsoluteTime();
 
 		HTTPingCallbackGot( *seqnoptr );
@@ -123,8 +126,14 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 			usleep( (int)(delay_time * 1000000) );
 		(*seqnoptr) ++;
 		HTTPingCallbackStart( *seqnoptr );
-
-
+		if( !breakout ) {
+#ifdef WIN32
+			closesocket( httpsock );
+#else
+			close( httpsock );
+#endif
+			goto reconnect;
+		}
 	}
 fail:
 	return;
