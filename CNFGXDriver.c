@@ -339,6 +339,7 @@ void CNFGSwapBuffers()
 void CNFGTackSegment( short x1, short y1, short x2, short y2 )
 {
 	XDrawLine( CNFGDisplay, CNFGPixmap, CNFGGC, x1, y1, x2, y2 );
+	XDrawPoint( CNFGDisplay, CNFGPixmap, CNFGGC, x1, y1 );
 }
 
 void CNFGTackPixel( short x1, short y1 )

@@ -61,12 +61,12 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	server = gethostbyname(hostname);
 	*getting_host_by_name = 0;
 	if (server == NULL) {
-		ERRM("ERROR, no such host as %s\n", hostname);
+		ERRMB("ERROR, no such host as %s\n", hostname);
 		goto fail;
 	}
 
 	/* build the server's Internet address */
-	bzero((char *) &serveraddr, sizeof(serveraddr));
+	memset((char *) &serveraddr, 0, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
 	serveraddr.sin_port = htons(portno);
@@ -75,32 +75,39 @@ reconnect:
 	*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
 	if (httpsock < 0)
 	{
-		ERRM( "Error opening socket\n" );
+		ERRMB( "Error opening socket\n" );
 		return;
 	}
 
 	/* connect: create a connection with the server */
 	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
 	{
-		ERRM( "%s: ERROR connecting\n", hostname );
+		ERRMB( "%s: ERROR connecting\n", hostname );
 		goto fail;
 	}
+
+	errbuffer[0] = 0;
 
 	while( 1 )
 	{
 		char buf[8192];
 
 		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\n\r\n", eurl?eurl:"/favicon.ico" );
-		send( httpsock, buf, n, MSG_NOSIGNAL );
+		int rs = send( httpsock, buf, n, MSG_NOSIGNAL );
 		double starttime = *timeouttime = OGGetAbsoluteTime();
-
-		int endstate = 0;
 		int breakout = 0;
+		if( rs != n ) breakout = 1;
+		int endstate = 0;
 		while( !breakout )
 		{
+#ifdef WIN32
+			n = recv( httpsock, buf, sizeof(buf)-1, 0);
+#else
 			n = recv( httpsock, buf, sizeof(buf)-1, MSG_PEEK);
 			if( n > 0 ) n = read( httpsock, buf, sizeof(buf)-1);
 			else if( n == 0 ) break; //FIN received
+#endif
+
 			
 			if( n < 0 ) return;
 			

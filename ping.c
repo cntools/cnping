@@ -146,13 +146,7 @@ void listener()
 
 void ping(struct sockaddr_in *addr )
 {
-#ifdef WIN32
-	const char val=255;
-#else
-	const int val=255;
-#endif
-	int i, cnt=1;
-	struct sockaddr_in r_addr;
+	int cnt=1;
 
 #ifdef WIN32
 	{

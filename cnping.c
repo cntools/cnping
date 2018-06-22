@@ -30,7 +30,10 @@ short screenx, screeny;
 const char * pinghost;
 float GuiYScaleFactor;
 int GuiYscaleFactorIsConstant;
-
+double globmaxtime, globmintime = 1e20;
+double globinterval, globlast;
+uint64_t globalrx;
+uint64_t globallost;
 uint8_t pattern[8];
 
 
@@ -42,36 +45,82 @@ double PingRecvTimes[PINGCYCLEWIDTH];
 int current_cycle = 0;
 
 int ExtraPingSize;
+int in_histogram_mode, in_frame_mode = 1;
+void HandleGotPacket( int seqno, int timeout );
+
+#define MAX_HISTO_MARKS (TIMEOUT*10000)
+uint64_t hist_counts[MAX_HISTO_MARKS];
+
+void HandleNewPacket( int seqno )
+{
+	double Now = OGGetAbsoluteTime();
+	PingSendTimes[seqno] = Now;
+	PingRecvTimes[seqno] = 0;
+	static int timeoutmark;
+
+	while( Now - PingSendTimes[timeoutmark] > TIMEOUT )
+	{
+		if( PingRecvTimes[timeoutmark] < PingSendTimes[timeoutmark] )
+		{
+			HandleGotPacket( timeoutmark, 1 );
+		}
+		timeoutmark++;
+	}
+}
+
+void HandleGotPacket( int seqno, int timeout )
+{
+	double Now = OGGetAbsoluteTime();
+
+	if( timeout )
+	{
+		if( PingRecvTimes[seqno] < -0.5 ) return;
+
+		globallost++;
+		PingRecvTimes[seqno] = -1;
+		hist_counts[MAX_HISTO_MARKS-1]++;
+		return;
+	}
+
+	if( PingRecvTimes[seqno] >= PingSendTimes[seqno] ) return;
+	if( PingSendTimes[seqno] < 1 )  return;
+	if( Now - PingSendTimes[seqno] > TIMEOUT ) return;
+
+	PingRecvTimes[seqno] = OGGetAbsoluteTime();
+	double Delta = PingRecvTimes[seqno] - PingSendTimes[seqno];
+	if( Delta > globmaxtime ) { globmaxtime = Delta; }
+	if( Delta < globmintime ) { globmintime = Delta; }
+	int slot = Delta * 10000;
+	if( slot >= MAX_HISTO_MARKS ) slot = MAX_HISTO_MARKS-1;
+	if( slot < 0 ) slot = 0;
+	hist_counts[slot]++;
+
+	if( globlast > 0.5 )
+	{
+		if( Now - globlast > globinterval ) globinterval = Now - globlast;
+	}
+	globlast = Now;
+	globalrx++;
+}
 
 
 void HTTPingCallbackStart( int seqno )
 {
 	current_cycle = seqno;
-
-	PingSendTimes[seqno] = OGGetAbsoluteTime();
-	PingRecvTimes[seqno] = 0;
+	HandleNewPacket( seqno );
 }
 
 void HTTPingCallbackGot( int seqno )
 {
-	PingRecvTimes[seqno] = OGGetAbsoluteTime();
+	HandleGotPacket( seqno, 0 );
 }
 
 void display(uint8_t *buf, int bytes)
 {
 	int reqid = (buf[0] << 24) | (buf[1]<<16) | (buf[2]<<8) | (buf[3]);
 	reqid &= (PINGCYCLEWIDTH-1);
-
-	double STime = PingSendTimes[reqid];
-	double LRTime = PingRecvTimes[reqid];
-
 	if( memcmp( buf+4, pattern, 8 ) != 0 ) return;
-	if( LRTime > STime ) return;
-	if( STime < 1 )  return;
-
-	//Otherwise this is a legit packet.
-
-	PingRecvTimes[reqid] = OGGetAbsoluteTime();
+	HandleGotPacket( reqid, 0 );
 }
 
 int load_ping_packet( uint8_t * buffer, int bufflen )
@@ -88,8 +137,7 @@ int load_ping_packet( uint8_t * buffer, int bufflen )
 		PingSendTimes[(current_cycle+PINGCYCLEWIDTH-1)&(PINGCYCLEWIDTH-1)] = 0; //Unset ping send.
 	}
 
-	PingSendTimes[current_cycle&(PINGCYCLEWIDTH-1)] = OGGetAbsoluteTime();
-	PingRecvTimes[current_cycle&(PINGCYCLEWIDTH-1)] = 0;
+	HandleNewPacket( current_cycle&(PINGCYCLEWIDTH-1) );
 
 	current_cycle++;
 
@@ -117,6 +165,23 @@ void HandleKey( int keycode, int bDown )
 {
 	switch( keycode )
 	{
+		case 'f':
+			if( bDown ) in_frame_mode = !in_frame_mode;
+			if( !in_frame_mode ) in_histogram_mode = 1;
+			break;
+		case 'm': 
+			if( bDown ) in_histogram_mode = !in_histogram_mode;
+			if( !in_histogram_mode ) in_frame_mode = 1;
+			break;
+		case 'c':
+			memset( hist_counts, 0, sizeof( hist_counts ) );
+			globmaxtime = 0;
+			globmintime = 1e20;
+			globinterval = 0;
+			globlast = 0;
+			globalrx = 0;
+			globallost = 0;
+			break;
 		case 'q':
 			exit(0);
 			break;
@@ -127,7 +192,8 @@ void HandleButton( int x, int y, int button, int bDown ){}
 void HandleMotion( int x, int y, int mask ){}
 void HandleDestroy() { exit(0); }
 
-double GetGlobMaxPingTime( void )
+
+double GetWindMaxPingTime( void )
 {
 	int i;
 	double maxtime = 0;
@@ -151,12 +217,152 @@ double GetGlobMaxPingTime( void )
 	return maxtime;
 }
 
+void DrawMainText( const char * stbuf )
+{
+	int x, y;
+	CNFGColor( 0x00 );
+	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
+	{
+		CNFGPenX = 10+x; CNFGPenY = 10+y;
+		CNFGDrawText( stbuf, 2 );
+	}
+	CNFGColor( 0xffffff );
+	CNFGPenX = 10; CNFGPenY = 10;
+	CNFGDrawText( stbuf, 2 );
+}
+
+void DrawFrameHistogram()
+{
+	int i;
+//	double Now = OGGetAbsoluteTime();
+	const int colwid = 50;
+	int categories = (screenx-50)/colwid;
+	int maxpingslot = ( globmaxtime*10000.0 );
+	int minpingslot = ( globmintime*10000.0 );
+	int slots = maxpingslot-minpingslot;
+
+	if( categories <= 1 )
+	{
+		goto nodata;
+	}
+	else
+	{
+		int skips = ( (slots)/categories ) + 1;
+		int slotsmax = maxpingslot / skips + 1;
+		int slotsmin = minpingslot / skips;
+		slots = slotsmax - slotsmin;
+		uint64_t samples[slots+2];
+		int      ssmsMIN[slots+2];
+		int      ssmsMAX[slots+2];
+		int samp = minpingslot - 1;
+
+		if( slots <= 0 ) goto nodata;
+
+		memset( samples, 0, sizeof( samples ) );
+		if( samp < 0 ) samp = 0;
+
+		uint64_t highestchart = 0;
+		int tslot = 0;
+		for( i = slotsmin; i <= slotsmax; i++ )
+		{
+			int j;
+			uint64_t total = 0;
+			ssmsMIN[tslot] = samp;
+			for( j = 0; j < skips; j++ )
+			{
+				total += hist_counts[samp++];
+			}
+
+			ssmsMAX[tslot] = samp;
+			if( total > highestchart ) highestchart = total;
+			samples[tslot++] = total;
+		}
+
+		if( highestchart <= 0 )
+		{
+			goto nodata;
+		}
+
+		int rslots = 0;
+		for( i = 0; i < slots+1; i++ )
+		{
+			if( samples[i] ) rslots = i;
+		}
+		rslots++;
+
+		for( i = 0; i < rslots; i++ )
+		{
+			CNFGColor( 0x33cc33 );
+			int top = 30;
+			uint64_t samps = samples[i];
+			int bottom = screeny - 50;
+			int height = samps?(samps * (bottom-top) / highestchart + 1):0;
+			int startx = (i+1) * (screenx-50) / rslots;
+			int endx = (i+2) * (screenx-50) / rslots;
+
+			if( !in_frame_mode )
+			{
+				CNFGTackRectangle( startx, bottom-height, endx, bottom + 1 );
+				CNFGColor( 0x00 );
+			}
+			else
+			{
+				CNFGColor( 0x8080ff );
+			}
+			CNFGTackSegment( startx, bottom+1, endx, bottom+1 );
+
+			CNFGTackSegment( startx, bottom-height, startx, bottom+1 );
+			CNFGTackSegment( endx,   bottom-height, endx,   bottom+1 );
+
+			CNFGTackSegment( startx, bottom-height, endx, bottom-height );
+			char stbuf[1024];
+			int log10 = 1;
+			int64_t ll = samps;
+			while( ll >= 10 )
+			{
+				ll /= 10;
+				log10++;
+			}
+
+			if( !in_frame_mode )
+			{
+				CNFGColor( 0xffffff );
+			}
+			else
+			{
+				CNFGColor( 0x8080ff );
+			}
+
+
+			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+3;
+#ifdef WIN32
+			sprintf( stbuf, "%llu", samps );
+#else
+			sprintf( stbuf, "%lu", samps );
+#endif
+			CNFGDrawText( stbuf, 2 );
+
+			CNFGPenX = startx; CNFGPenY = bottom+14;
+			sprintf( stbuf, "%5.1fms\n%5.1fms", ssmsMIN[i]/10.0, ssmsMAX[i]/10.0 );
+			CNFGDrawText( stbuf, 2 );
+		}
+		char stt[1024];
+		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %lu/%lu = %6.2f%%", pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
+		if( !in_frame_mode )
+			DrawMainText( stt );
+		return;
+	}
+nodata:
+	DrawMainText( "No data.\n" );
+	return;
+}
+
+
 void DrawFrame( void )
 {
-	int i, x, y;
+	int i;
 
 	double now = OGGetAbsoluteTime();
-	double globmaxtime = GetGlobMaxPingTime();
 
 	double totaltime = 0;
 	int totalcountok = 0;
@@ -166,6 +372,7 @@ void DrawFrame( void )
 	double stddev = 0;
 	double last = -1;
 	double loss = 100.00;
+	double windmaxtime = GetWindMaxPingTime();
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -202,7 +409,7 @@ void DrawFrame( void )
 
 		if (!GuiYscaleFactorIsConstant)
 		{
-			GuiYScaleFactor =  (screeny - 50) / globmaxtime;
+			GuiYScaleFactor =  (screeny - 50) / windmaxtime;
 		}
 
 		int h = dt*GuiYScaleFactor;
@@ -246,26 +453,19 @@ void DrawFrame( void )
 	l = (avg_gui) - (stddev_gui);
 	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
 
-	char stbuf[1024];
+	char stbuf[2048];
 	char * sptr = &stbuf[0];
 
 	sptr += sprintf( sptr, 
-		"Last: %5.2f ms\n"
-		"Min : %5.2f ms\n"
-		"Max : %5.2f ms\n"
-		"Avg : %5.2f ms\n"
-		"Std : %5.2f ms\n"
-		"Loss: %5.1f %%\n\n%s", last, mintime, maxtime, avg, stddev, loss, (ping_failed_to_send?"Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?":"") );
+		"Last:%6.2f ms    Host: %s\n"
+		"Min :%6.2f ms\n"
+		"Max :%6.2f ms    Historical max:   %5.2f ms\n"
+		"Avg :%6.2f ms    Biggest interval: %5.2f ms\n"
+		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.2f%%\n"
+		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
+		globallost, globalrx, globallost*100.0f/(globalrx+globallost), loss );
 
-	CNFGColor( 0x00 );
-	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
-	{
-		CNFGPenX = 10+x; CNFGPenY = 10+y;
-		CNFGDrawText( stbuf, 2 );
-	}
-	CNFGColor( 0xffffff );
-	CNFGPenX = 10; CNFGPenY = 10;
-	CNFGDrawText( stbuf, 2 );
+	DrawMainText( stbuf );
 	OGUSleep( 1000 );
 }
 
@@ -397,6 +597,7 @@ int main( int argc, const char ** argv )
 				case 's': ExtraPingSize = atoi( nextargv ); break;
 				case 'y': GuiYScaleFactor = atof( nextargv ); break;
 				case 't': sprintf(title, "%s", nextargv); break;
+				case 'm': in_histogram_mode = 1; break;
 				default: displayhelp = 1; break;
 			}
 		}
@@ -467,7 +668,27 @@ int main( int argc, const char ** argv )
 		CNFGColor( 0xFFFFFF );
 		CNFGGetDimensions( &screenx, &screeny );
 
-		DrawFrame();
+		if( in_frame_mode )
+		{
+			DrawFrame();
+		}
+
+		if( in_histogram_mode )
+		{
+			DrawFrameHistogram();
+		}
+
+		CNFGPenX = 100; CNFGPenY = 100;
+		CNFGColor( 0xff );
+		if( ping_failed_to_send )
+		{
+			CNFGDrawText( "Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?", 3 );
+		}
+		else
+		{
+			CNFGDrawText( errbuffer, 3 );
+		}
+
 
 		frames++;
 		CNFGSwapBuffers();
