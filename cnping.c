@@ -65,6 +65,7 @@ void HandleNewPacket( int seqno )
 			HandleGotPacket( timeoutmark, 1 );
 		}
 		timeoutmark++;
+		if( timeoutmark >= PINGCYCLEWIDTH ) timeoutmark = 0;
 	}
 }
 
