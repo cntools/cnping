@@ -84,7 +84,7 @@ uint16_t checksum( const unsigned char * start, uint16_t len )
 	const uint16_t * wptr = (uint16_t*) start;
 	uint32_t csum = 0;
 	for (i=1;i<len;i+=2)
-		csum += (uint32_t)(*(wptr++));	
+		csum += (uint32_t)(*(wptr++));
 	if( len & 1 )  //See if there's an odd number of bytes?
 		csum += *(uint8_t*)wptr;
 	if (csum>>16)
@@ -115,7 +115,7 @@ void listener()
 	for (;;)
 	{
 		socklen_t addrlenval=sizeof(addr);
-		int bytes; 
+		int bytes;
 
 #ifdef WIN32
 		WSAPOLLFD fda[1];

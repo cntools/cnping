@@ -19,17 +19,8 @@ void * PingListen( void * r )
 
 void display(uint8_t *buf, int bytes)
 {
-	int i;
 	uint32_t reqid = ((uint32_t)buf[0+1] << 24) | (buf[1+1]<<16) | (buf[2+1]<<8) | (buf[3+1]);
 
-/*	for( i = 0; i < bytes; i++ )
-	{
-		printf( "%02x ", buf[i] );
-	}
-	printf( "\n" );
-	printf( "REQ: %08x %08x\n", reqid, my_random_key );
-///	printf( "%d.%d.%d.%d\n", buf[4], buf[5], buf[6], buf[7] );
-*/
 	if( reqid != my_random_key ) return;
 
 	printf( "%d.%d.%d.%d\n", buf[4+1], buf[5+1], buf[6+1], buf[7+1] );
