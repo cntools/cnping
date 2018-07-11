@@ -252,6 +252,8 @@ void DrawFrameHistogram()
 		int slotsmax = maxpingslot / skips + 1;
 		int slotsmin = minpingslot / skips;
 		slots = slotsmax - slotsmin;
+		if( slots <= 0 ) goto nodata;
+
 		uint64_t samples[slots+2];
 		int      ssmsMIN[slots+2];
 		int      ssmsMAX[slots+2];
