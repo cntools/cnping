@@ -468,7 +468,7 @@ void DrawFrame( void )
 		"Max :%6.2f ms    Historical max:   %5.2f ms\n"
 		"Avg :%6.2f ms    Biggest interval: %5.2f ms\n"
 #ifdef WIN32
-		"Std :%6.2f ms    Historical loss:  %I64u/%I64u %5.df%%\n"
+		"Std :%6.2f ms    Historical loss:  %I64u/%I64u %5.3f%%\n"
 #else
 		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
 #endif
