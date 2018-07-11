@@ -337,7 +337,7 @@ void DrawFrameHistogram()
 
 			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+3;
 #ifdef WIN32
-			sprintf( stbuf, "%llu", samps );
+			sprintf( stbuf, "%I64u", samps );
 #else
 			sprintf( stbuf, "%lu", samps );
 #endif
@@ -348,7 +348,12 @@ void DrawFrameHistogram()
 			CNFGDrawText( stbuf, 2 );
 		}
 		char stt[1024];
-		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %llu/%llu = %6.2f%%", pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
+#ifdef WIN32
+		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %llu/%llu = %6.2f%%",
+#else
+		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %lu/%lu = %6.2f%%",
+#endif
+			pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
 		if( !in_frame_mode )
 			DrawMainText( stt );
 		return;
@@ -462,7 +467,11 @@ void DrawFrame( void )
 		"Min :%6.2f ms\n"
 		"Max :%6.2f ms    Historical max:   %5.2f ms\n"
 		"Avg :%6.2f ms    Biggest interval: %5.2f ms\n"
+#ifdef WIN32
+		"Std :%6.2f ms    Historical loss:  %I64u/%I64u %5.2f%%\n"
+#else
 		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.2f%%\n"
+#endif
 		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
 		globallost, globalrx, globallost*100.0f/(globalrx+globallost), loss );
 
