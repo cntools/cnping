@@ -242,7 +242,7 @@ void DrawFrameHistogram()
 	int minpingslot = ( globmintime*10000.0 );
 	int slots = maxpingslot-minpingslot;
 
-	if( categories <= 1 )
+	if( categories <= 2 )
 	{
 		goto nodata;
 	}
@@ -257,7 +257,7 @@ void DrawFrameHistogram()
 		int      ssmsMAX[slots+2];
 		int samp = minpingslot - 1;
 
-		if( slots <= 0 ) goto nodata;
+		if( slots <= 1 ) goto nodata;
 
 		memset( samples, 0, sizeof( samples ) );
 		if( samp < 0 ) samp = 0;
@@ -405,7 +405,7 @@ void DrawFrame( void )
 			CNFGColor( 0xff );
 			dt = now - st;
 			dt *= 1000;
-			if( i != 0 ) totalcountloss++;
+			if( i > 5 ) totalcountloss++; //Get a freebie on the first 5.
 		}
 		else // no ping sent for this point in time (after startup)
 		{
@@ -470,7 +470,7 @@ void DrawFrame( void )
 #ifdef WIN32
 		"Std :%6.2f ms    Historical loss:  %I64u/%I64u %5.2f%%\n"
 #else
-		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.2f%%\n"
+		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
 #endif
 		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
 		globallost, globalrx, globallost*100.0f/(globalrx+globallost), loss );
