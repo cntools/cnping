@@ -348,7 +348,7 @@ void DrawFrameHistogram()
 			CNFGDrawText( stbuf, 2 );
 		}
 		char stt[1024];
-		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %lu/%lu = %6.2f%%", pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
+		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %llu/%llu = %6.2f%%", pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
 		if( !in_frame_mode )
 			DrawMainText( stt );
 		return;
