@@ -559,6 +559,7 @@ int main( int argc, const char ** argv )
 	double LastFPSTime = OGGetAbsoluteTime();
 	double LastFrameTime = OGGetAbsoluteTime();
 	double SecToWait;
+	double frameperiodseconds;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -671,6 +672,9 @@ int main( int argc, const char ** argv )
 		OGCreateThread( PingListen, 0 );
 	}
 
+
+	frameperiodseconds = fmin(.2, fmax(.03, pingperiodseconds));
+
 	while(1)
 	{
 		iframeno++;
@@ -712,8 +716,9 @@ int main( int argc, const char ** argv )
 			LastFPSTime+=1;
 		}
 
-		SecToWait = .030 - ( ThisTime - LastFrameTime );
-		LastFrameTime += .030;
+		SecToWait = frameperiodseconds - ( ThisTime - LastFrameTime );
+		LastFrameTime += frameperiodseconds;
+		//printf("iframeno = %d; SecToWait = %f; pingperiodseconds = %f; frameperiodseconds = %f \n", iframeno, SecToWait, pingperiodseconds, frameperiodseconds);
 		if( SecToWait > 0 )
 			OGUSleep( (int)( SecToWait * 1000000 ) );
 	}
