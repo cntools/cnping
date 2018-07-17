@@ -6,12 +6,12 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#ifndef MSG_NOSIGNAL
+	#define MSG_NOSIGNAL 0
+#endif
+
 #ifdef WIN32
 	#include <winsock2.h>
-	#ifndef MSG_NOSIGNAL 
-	#define MSG_NOSIGNAL 0
-	#endif
-
 #else
 	#include <sys/socket.h>
 	#include <netinet/in.h>
@@ -85,6 +85,11 @@ reconnect:
 		ERRMB( "%s: ERROR connecting\n", hostname );
 		goto fail;
 	}
+
+#ifdef __APPLE__
+	int opt = 1;
+	setsockopt(httpsock, SOL_SOCKET, SO_NOSIGPIPE, &opt, sizeof(opt));
+#endif
 
 	errbuffer[0] = 0;
 
