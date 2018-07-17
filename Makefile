@@ -1,4 +1,4 @@
-all : cnping searchnet cnping-mousey
+all : cnping searchnet
 
 CFLAGS:=$(CFLAGS) -g -Os -I/opt/X11/include -Wall
 CXXFLAGS:=$(CFLAGS)
@@ -17,14 +17,8 @@ cnping.exe : cnping.c CNFGFunctions.c CNFGWinDriver.c os_generic.c ping.c httpin
 cnping : cnping.o CNFGFunctions.o CNFGXDriver.o os_generic.o ping.o httping.o
 	gcc $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS) 
 
-cnping-mousey : cnping-mousey.o CNFGFunctions.o CNFGXDriver.o os_generic.o ping.o
-	gcc $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS) 
-
 cnping_mac : cnping.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c
 	gcc -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
-
-cnping-mousey_mac : cnping-mousey.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c
-	gcc -o cnping-mousey $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
 
 searchnet : os_generic.o ping.o searchnet.o
 	gcc $(CFLAGS) -o $@ $^ -lpthread
@@ -37,5 +31,5 @@ linuxinstall : cnping
 #	sudo install cnping /usr/local/bin/  #Another option - using install.
 
 clean : 
-	rm -rf *.o *~ cnping cnping.exe cnping-mousey searchnet
+	rm -rf *.o *~ cnping cnping.exe cnping_mac searchnet
 
