@@ -17,7 +17,7 @@ cnping.exe : cnping.c CNFGFunctions.c CNFGWinDriver.c os_generic.c ping.c httpin
 cnping : cnping.o CNFGFunctions.o CNFGXDriver.o os_generic.o ping.o httping.o
 	gcc $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS) 
 
-cnping_mac : cnping.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c
+cnping_mac : cnping.c CNFGFunctions.c CNFGCocoaCGDriver.m os_generic.c ping.c httping.o
 	gcc -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
 
 searchnet : os_generic.o ping.o searchnet.o
