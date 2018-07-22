@@ -6,10 +6,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#ifndef MSG_NOSIGNAL
-	#define MSG_NOSIGNAL 0
-#endif
-
 #ifdef WIN32
 	#include <winsock2.h>
 #else
@@ -21,6 +17,9 @@
 #include "os_generic.h"
 #include "error_handling.h"
 
+#ifndef MSG_NOSIGNAL
+	#define MSG_NOSIGNAL 0
+#endif
 
 #define HTTPTIMEOUT 3.0
 
