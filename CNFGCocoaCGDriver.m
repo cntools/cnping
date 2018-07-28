@@ -326,7 +326,7 @@ void CNFGHandleInput()
 
 void CNFGGetDimensions( short * x, short * y )
 {
-    frameRect = [app_window frame];
+    frameRect = [[app_window contentView] frame];
     CGSize app_imageSize = frameRect.size;
     if (app_imageSize.width != app_sw || app_imageSize.height != app_sh)
     {
