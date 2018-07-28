@@ -1,5 +1,5 @@
 //Copyright (c) 2011, 2017 <>< Charles Lohr - Under the MIT/x11 or NewBSD License you choose.
-//portions from 
+//portions from
 //http://www.xmission.com/~georgeps/documentation/tutorials/Xlib_Beginner.html
 
 //#define HAS_XINERAMA
@@ -128,8 +128,8 @@ void CNFGSetupFullscreen( const char * WindowName, int screen_no )
 
 	CNFGWindow = XCreateWindow(CNFGDisplay, XRootWindow(CNFGDisplay, screen),
 		xpos, ypos, CNFGWinAtt.width, CNFGWinAtt.height,
-		0, CNFGWinAtt.depth, InputOutput, CNFGVisual, 
-		CWBorderPixel | CWEventMask | CWOverrideRedirect | CWSaveUnder, 
+		0, CNFGWinAtt.depth, InputOutput, CNFGVisual,
+		CWBorderPixel | CWEventMask | CWOverrideRedirect | CWSaveUnder,
 		&setwinattr);
 
 	XMapWindow(CNFGDisplay, CNFGWindow);
@@ -173,7 +173,7 @@ void CNFGSetup( const char * WindowName, int w, int h )
 
 #ifdef CNFGOGL
 	int attribs[] = { GLX_RGBA,
-		GLX_DOUBLEBUFFER, 
+		GLX_DOUBLEBUFFER,
 		GLX_RED_SIZE, 1,
 		GLX_GREEN_SIZE, 1,
 		GLX_BLUE_SIZE, 1,
@@ -214,10 +214,9 @@ void CNFGHandleInput()
 	XEvent report;
 
 	int bKeyDirection = 1;
-	int r;
 	while( XPending( CNFGDisplay ) )
 	{
-		r=XNextEvent( CNFGDisplay, &report );
+		XNextEvent( CNFGDisplay, &report );
 
 		bKeyDirection = 1;
 		switch  (report.type)
@@ -251,7 +250,8 @@ void CNFGHandleInput()
 			exit( 0 );
 			break;
 		default:
-			printf( "Event: %d\n", report.type );
+			//printf( "Event: %d\n", report.type );
+			break;
 		}
 	}
 }
@@ -262,8 +262,6 @@ void CNFGUpdateScreenWithBitmap( unsigned long * data, int w, int h )
 	static XImage *xi;
 	static int depth;
 	static int lw, lh;
-	static unsigned char * lbuffer;
-	int r, ls;
 
 	if( !xi )
 	{
@@ -281,9 +279,6 @@ void CNFGUpdateScreenWithBitmap( unsigned long * data, int w, int h )
 		lw = w;
 		lh = h;
 	}
-
-	ls = lw * lh;
-
 	XPutImage(CNFGDisplay, CNFGWindow, CNFGWindowGC, xi, 0, 0, 0, 0, w, h );
 }
 
@@ -323,7 +318,7 @@ uint32_t CNFGColor( uint32_t RGB )
 void CNFGClearFrame()
 {
 	XGetWindowAttributes( CNFGDisplay, CNFGWindow, &CNFGWinAtt );
-	XSetForeground(CNFGDisplay, CNFGGC, CNFGColor(CNFGBGColor) );	
+	XSetForeground(CNFGDisplay, CNFGGC, CNFGColor(CNFGBGColor) );
 	XFillRectangle(CNFGDisplay, CNFGPixmap, CNFGGC, 0, 0, CNFGWinAtt.width, CNFGWinAtt.height );
 }
 
@@ -338,6 +333,7 @@ void CNFGSwapBuffers()
 void CNFGTackSegment( short x1, short y1, short x2, short y2 )
 {
 	XDrawLine( CNFGDisplay, CNFGPixmap, CNFGGC, x1, y1, x2, y2 );
+	XDrawPoint( CNFGDisplay, CNFGPixmap, CNFGGC, x1, y1 );
 }
 
 void CNFGTackPixel( short x1, short y1 )

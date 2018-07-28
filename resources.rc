@@ -8,7 +8,7 @@ STYLE WS_CAPTION | WS_SYSMENU
 CAPTION "cnping"
 BEGIN
     LTEXT           "Usage: cnping [host] [period] [extra size] [y-axis scaling]",                        0, 60, 0, 300, 20, SS_LEFT
-    LTEXT           "[host]                 -- domain or IP address of ping target",                      0, 60, 15, 300, 20, SS_LEFT
+    LTEXT           "[host]                 -- domain or IP address of icmp ping, or http://host",        0, 60, 15, 300, 20, SS_LEFT
     LTEXT           "[period]               -- period in seconds (optional), default is 0.02",            0, 60, 30, 300, 20, SS_LEFT
     LTEXT           "[extra size]           -- ping packet extra size (above 12), optional, default = 0", 0, 60, 45, 300, 10, SS_LEFT
     LTEXT           "[const y-axis scaling] -- use a fixed scaling factor instead of auto scaling",       0, 60, 60, 300, 10, SS_LEFT

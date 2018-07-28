@@ -1,7 +1,7 @@
 #ifndef _OS_GENERIC_H
 #define _OS_GENERIC_H
 
-#ifdef WIN32
+#if defined( WIN32 ) || defined (WINDOWS) || defined( _WIN32)
 #define USE_WINDOWS
 #endif
 
@@ -25,7 +25,7 @@ og_thread_t OGCreateThread( void * (routine)( void * ), void * parameter );
 void * OGJoinThread( og_thread_t ot );
 void OGCancelThread( og_thread_t ot );
 
-//Always a recrusive mutex.
+//Always a recursive mutex.
 og_mutex_t OGCreateMutex();
 void OGLockMutex( og_mutex_t om );
 void OGUnlockMutex( og_mutex_t om );
