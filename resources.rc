@@ -3,19 +3,19 @@
 #include <windows.h>
 
 LANGUAGE 9, SUBLANG_DEFAULT
-IPDialog DIALOG 10, 10, 300, 100
+IPDialog DIALOG 10, 10, 340, 100
 STYLE WS_CAPTION | WS_SYSMENU
 CAPTION "cnping"
 BEGIN
-    LTEXT           "Usage: cnping [host] [period] [extra size] [y-axis scaling]",                        0, 60, 0, 300, 20, SS_LEFT
-    LTEXT           "[host]                 -- domain or IP address of icmp ping, or http://host",        0, 60, 15, 300, 20, SS_LEFT
-    LTEXT           "[period]               -- period in seconds (optional), default is 0.02",            0, 60, 30, 300, 20, SS_LEFT
-    LTEXT           "[extra size]           -- ping packet extra size (above 12), optional, default = 0", 0, 60, 45, 300, 10, SS_LEFT
-    LTEXT           "[const y-axis scaling] -- use a fixed scaling factor instead of auto scaling",       0, 60, 60, 300, 10, SS_LEFT
-    EDITTEXT        3, 1, 15, 58, 12
-    EDITTEXT        4, 1, 30, 58, 12
-    EDITTEXT        5, 1, 45, 58, 12
-    EDITTEXT        6, 1, 60, 58, 12
+    LTEXT           "Usage: cnping [host] [period] [extra size] [y-axis scaling]",                        0, 90, 0, 300, 20, SS_LEFT
+    LTEXT           "[host]                 -- domain or IP address of icmp ping, or http://host",        0, 90, 15, 300, 20, SS_LEFT
+    LTEXT           "[period]               -- period in seconds (optional), default is 0.02",            0, 90, 30, 300, 20, SS_LEFT
+    LTEXT           "[extra size]           -- ping packet extra size (above 12), optional, default = 0", 0, 90, 45, 300, 10, SS_LEFT
+    LTEXT           "[const y-axis scaling] -- use a fixed scaling factor instead of auto scaling",       0, 90, 60, 300, 10, SS_LEFT
+    EDITTEXT        3, 1, 15, 88, 12
+    EDITTEXT        4, 1, 30, 88, 12
+    EDITTEXT        5, 1, 45, 88, 12
+    EDITTEXT        6, 1, 60, 88, 12
     PUSHBUTTON      "&Ping", 7, 25, 80, 100, 10
     PUSHBUTTON      "&Close", 8, 175, 80, 100, 10
 END

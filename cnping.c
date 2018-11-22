@@ -486,6 +486,35 @@ void DrawFrame( void )
 const char * glargv[10];
 int glargc = 0;
 
+int RegString( int write, char * data, DWORD len )
+{
+    HKEY hKey;
+	if( RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\cnping", 0, NULL,       
+        REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, NULL) == ERROR_SUCCESS)
+	{
+		if( write )
+		{
+			RegSetValueExA( hKey, "history", 0, REG_SZ, data, len );
+			return 0;
+		}
+		else
+		{
+			DWORD type;
+			if( RegGetValueA( hKey, "", "history", 0x02, &type, data, &len ) == ERROR_SUCCESS )
+			{	
+				return 0;
+			}
+			return -16;
+		}
+
+		RegCloseKey( hKey );
+	}
+	else
+	{
+		return -15;
+	}
+}
+
 INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM lParam )
 {
 
@@ -494,6 +523,13 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 	case WM_INITDIALOG:
 		SetDlgItemText(hwndDlg, 4, "0.02");
 		SetDlgItemText(hwndDlg, 5, "0" );
+
+		char data[1024];
+		if( !RegString( 0, data, sizeof( data ) ) )
+		{
+			SetDlgItemText(hwndDlg, 3, data);
+		}
+
 		return 0;
 	case WM_COMMAND:
 		switch( wParam>>24 )
@@ -508,13 +544,15 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 					exit( -1 );
 				}
 
-				char Address[1024]; GetDlgItemText(hwndDlg, 3, Address, sizeof(Address));
-				char Period[1024]; GetDlgItemText(hwndDlg, 4, Period, sizeof(Period));
-				char Extra[1024]; GetDlgItemText(hwndDlg, 5, Extra, sizeof(Extra));
-				char Scaling[1024]; GetDlgItemText(hwndDlg, 6, Scaling, sizeof(Scaling));
+				char Address[128]; GetDlgItemText(hwndDlg, 3, Address, sizeof(Address));
+				char Period[128];  GetDlgItemText(hwndDlg, 4, Period, sizeof(Period));
+				char Extra[128];   GetDlgItemText(hwndDlg, 5, Extra, sizeof(Extra));
+				char Scaling[128]; GetDlgItemText(hwndDlg, 6, Scaling, sizeof(Scaling));
 			
 				if( strlen( Address ) )
 				{
+					RegString( 1, Address, strlen( Address ) );
+
 					glargc = 2;
 					glargv[1] = strdup( Address );
 					if( strlen( Period ) )
