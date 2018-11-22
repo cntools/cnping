@@ -36,6 +36,8 @@ uint64_t globalrx;
 uint64_t globallost;
 uint8_t pattern[8];
 
+int     runargc;
+char ** runargv;
 
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
@@ -166,6 +168,20 @@ void HandleKey( int keycode, int bDown )
 {
 	switch( keycode )
 	{
+
+#if defined( WIN32 ) || defined( WINDOWS )
+		case 'r':
+		{
+			char   lpFilename[1024];
+			char   lpDirectory[1024];
+			GetCurrentDirectory( lpDirectory, 1023 );
+			GetModuleFileNameA( GetModuleHandle(0), lpFilename, 1023 );
+
+			CreateProcessA( lpFilename, GetCommandLine(), 0, 0, 1, 0, 0, lpDirectory, 0, 0 );
+			exit( 0 );
+			break;
+		}
+#endif
 		case 'f':
 			if( bDown ) in_frame_mode = !in_frame_mode;
 			if( !in_frame_mode ) in_histogram_mode = 1;
@@ -619,6 +635,10 @@ int main( int argc, const char ** argv )
 		argv = glargv;
 	}
 #endif
+
+	runargc = argc;
+	runargv = argv;
+
 	pingperiodseconds = 0.02;
 	ExtraPingSize = 0;
 	title[0] = 0;
