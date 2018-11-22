@@ -539,7 +539,7 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 			case 0:
 			{
 				int id = wParam & 0xffffff;
-				if( id == 8 )
+				if( id == 8 || id == 2 )
 				{
 					exit( -1 );
 				}
