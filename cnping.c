@@ -36,9 +36,6 @@ uint64_t globalrx;
 uint64_t globallost;
 uint8_t pattern[8];
 
-int     runargc;
-char ** runargv;
-
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
 
@@ -635,9 +632,6 @@ int main( int argc, const char ** argv )
 		argv = glargv;
 	}
 #endif
-
-	runargc = argc;
-	runargv = argv;
 
 	pingperiodseconds = 0.02;
 	ExtraPingSize = 0;
