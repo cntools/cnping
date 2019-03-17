@@ -37,7 +37,7 @@ uint64_t globallost;
 uint8_t pattern[8];
 
 int     runargc;
-char ** runargv;
+const char ** runargv;
 
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
@@ -174,7 +174,7 @@ void HandleKey( int keycode, int bDown )
 		{
 			char   lpFilename[1024];
 			char   lpDirectory[1024];
-			GetCurrentDirectory( lpDirectory, 1023 );
+			GetCurrentDirectory( 1023, lpDirectory );
 			GetModuleFileNameA( GetModuleHandle(0), lpFilename, 1023 );
 
 			CreateProcessA( lpFilename, GetCommandLine(), 0, 0, 1, 0, 0, lpDirectory, 0, 0 );
@@ -510,7 +510,7 @@ int RegString( int write, char * data, DWORD len )
 	{
 		if( write )
 		{
-			RegSetValueExA( hKey, "history", 0, REG_SZ, data, len );
+			RegSetValueExA( hKey, "history", 0, REG_SZ, (uint8_t*)data, len );
 			return 0;
 		}
 		else

@@ -10,9 +10,140 @@
 #include <stdlib.h>
 #include "ping.h"
 #include "os_generic.h"
-
-
 #include "error_handling.h"
+
+int ping_failed_to_send;
+float pingperiodseconds;
+int precise_ping;
+struct sockaddr_in psaddr;
+
+#ifdef WIN_USE_NO_ADMIN_PING
+
+
+#include <inaddr.h>
+#include <winsock2.h>
+#include <windows.h>
+#include <ws2tcpip.h>
+#include <ipexport.h>
+#include <icmpapi.h>
+#define MAX_PING_SIZE 16384
+#define PINGTHREADS 100
+
+#ifndef MINGW_BUILD
+	#pragma comment(lib, "Ws2_32.lib")
+	#pragma comment(lib, "iphlpapi.lib")
+#endif
+
+static og_sema_t s_disp;
+static og_sema_t s_exec[PINGTHREADS];
+
+void ping_setup()
+{
+	int i;
+
+#ifdef WIN32
+	WSADATA wsaData;
+	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
+	if( r )
+	{
+		ERRM( "Fault in WSAStartup\n" );
+		exit( -2 );
+	}
+#endif
+
+	s_disp = OGCreateSema();
+	for( i = 0; i < PINGTHREADS; i++ )
+	{
+		s_exec[i] = OGCreateSema();
+	}
+	//This function is executed first.
+}
+
+void listener()
+{
+	static uint8_t listth;
+	if( listth ) return;
+	listth = 1;
+
+	OGUnlockSema( s_disp );
+	//Normally needs to call display(buf + 28, bytes - 28 ); on successful ping.
+	//This function is executed as a thread after setup.
+	//Really, we just use the s_disp semaphore to make sure we only launch disp's at correct times.
+
+	while(1) { OGSleep( 100000 ); }
+	return;
+}
+
+static HANDLE pinghandles[PINGTHREADS];
+
+static void * pingerthread( void * v )
+{
+	og_sema_t * pingsema = (og_sema_t*)v;
+	int which_sem = pingsema - s_exec;
+	uint8_t ping_payload[MAX_PING_SIZE];
+
+	HANDLE ih = pinghandles[which_sem];
+
+	int timeout_ms = pingperiodseconds * (PINGTHREADS-1) * 1000;
+	printf( "Timeout: %d\n", timeout_ms );
+	while(1)
+	{
+		OGLockSema( pingsema );
+		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ) );
+
+		struct repl_t
+		{
+			ICMP_ECHO_REPLY rply;
+			uint8_t err_data[8];
+		} repl;
+
+		DWORD res = IcmpSendEcho( ih,
+			psaddr.sin_addr.S_un.S_addr, ping_payload, rl,
+			0, &repl, sizeof( repl ),
+			timeout_ms );
+		OGLockSema( s_disp );
+		ERRM( "RES: %lu\n", res );
+		if( res )
+		{
+			display( ping_payload, rl );
+		}
+	}
+	return 0;
+}
+
+void ping(struct sockaddr_in *addr )
+{
+	int i;
+	//Launch pinger threads
+	for( i = 0; i < PINGTHREADS; i++ )
+	{
+		HANDLE ih = pinghandles[i] = IcmpCreateFile();
+		if( ih == INVALID_HANDLE_VALUE )
+		{
+			ERRM( "Cannot create ICMP thread %d\n", i );
+			exit( 0 );
+		}
+
+		OGCreateThread( pingerthread, &s_exec[i] );
+	}
+	//This function is executed as a thread after setup.
+
+	while(1)
+	{
+		if( i >= PINGTHREADS-1 ) i = 0;
+		else i++;
+		OGUnlockSema( s_exec[i] );
+		OGUSleep( (int)(pingperiodseconds * 1000000) );
+	}
+}
+
+
+
+#else
+
+//The normal way to do it - only problem is Windows needs admin privs.
+
+
 
 #ifdef WIN32
 	#include <winsock2.h>
@@ -21,7 +152,9 @@
 	#define ICMP_ECHO	8
 	#define IP_TTL		2
 	#define O_NONBLOCK   04000
+#ifndef MINGW_BUILD
 	#pragma comment(lib, "Ws2_32.lib")
+#endif
 	#include <windows.h>
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
@@ -62,8 +195,6 @@ struct icmphdr
 };
 #endif
 
-float pingperiodseconds;
-int precise_ping;
 
 #define PACKETSIZE	65536
 
@@ -75,8 +206,6 @@ struct packet
 
 int sd;
 int pid=-1;
-int ping_failed_to_send;
-struct sockaddr_in psaddr;
 
 uint16_t checksum( const unsigned char * start, uint16_t len )
 {
@@ -140,7 +269,8 @@ void listener()
 
 		goto keep_retry_quick;
 	}
-	ERRM( "Fault on listen.\n" );
+
+	ERRM( "Fault on listen().\n" );
 	exit( 0 );
 }
 
@@ -250,10 +380,19 @@ void ping_setup()
 
 }
 
+#endif
+
+
+
 void do_pinger( const char * strhost )
 {
 	struct hostent *hname;
 	hname = gethostbyname(strhost);
+	if( hname == 0 )
+	{
+		ERRM( "Error: cannot find host %s\n", strhost );
+		return;
+	}
 
 	memset(&psaddr, 0, sizeof(psaddr));
 	psaddr.sin_family = hname->h_addrtype;
@@ -262,6 +401,6 @@ void do_pinger( const char * strhost )
 	ping(&psaddr );
 }
 
-char errbuffer[1024];
 
+char errbuffer[1024];
 
