@@ -12,6 +12,10 @@
 #include "os_generic.h"
 #include "error_handling.h"
 
+#ifdef TCC
+#include "tccheader.h"
+#endif
+
 int ping_failed_to_send;
 float pingperiodseconds;
 int precise_ping;
@@ -19,29 +23,36 @@ struct sockaddr_in psaddr;
 
 #ifdef WIN_USE_NO_ADMIN_PING
 
-
+#ifdef TCC
+	//...
+#else
 #include <inaddr.h>
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>
 #include <ipexport.h>
 #include <icmpapi.h>
+#endif
+
+
+
 #define MAX_PING_SIZE 16384
 #define PINGTHREADS 100
 
-#ifndef MINGW_BUILD
+#if !defined( MINGW_BUILD ) && !defined( TCC )
 	#pragma comment(lib, "Ws2_32.lib")
 	#pragma comment(lib, "iphlpapi.lib")
 #endif
 
 static og_sema_t s_disp;
+static og_sema_t s_ping;
 static og_sema_t s_exec[PINGTHREADS];
 
 void ping_setup()
 {
 	int i;
 
-#ifdef WIN32
+#if defined( WIN32 ) || defined( WINDOWS )
 	WSADATA wsaData;
 	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
 	if( r )
@@ -50,12 +61,8 @@ void ping_setup()
 		exit( -2 );
 	}
 #endif
-
 	s_disp = OGCreateSema();
-	for( i = 0; i < PINGTHREADS; i++ )
-	{
-		s_exec[i] = OGCreateSema();
-	}
+	s_ping = OGCreateSema();
 	//This function is executed first.
 }
 
@@ -78,35 +85,45 @@ static HANDLE pinghandles[PINGTHREADS];
 
 static void * pingerthread( void * v )
 {
-	og_sema_t * pingsema = (og_sema_t*)v;
-	int which_sem = pingsema - s_exec;
 	uint8_t ping_payload[MAX_PING_SIZE];
 
-	HANDLE ih = pinghandles[which_sem];
+	HANDLE ih = *((HANDLE*)v);
 
 	int timeout_ms = pingperiodseconds * (PINGTHREADS-1) * 1000;
-	printf( "Timeout: %d\n", timeout_ms );
 	while(1)
 	{
-		OGLockSema( pingsema );
+		OGLockSema( s_ping );
 		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ) );
-
 		struct repl_t
 		{
 			ICMP_ECHO_REPLY rply;
-			uint8_t err_data[8];
+			uint8_t err_data[16384];
 		} repl;
-
+		struct in_addr inet_addr( char * a );
 		DWORD res = IcmpSendEcho( ih,
-			psaddr.sin_addr.S_un.S_addr, ping_payload, rl,
+			psaddr.sin_addr, ping_payload, rl,
 			0, &repl, sizeof( repl ),
 			timeout_ms );
+		int err;
+		if( !res ) err = GetLastError();
 		OGLockSema( s_disp );
-		ERRM( "RES: %lu\n", res );
+
+		if( !res )
+		{
+			if( err == 11050 )
+			{
+				printf( "GENERAL FAILURE\n" );
+			}
+			else
+			{
+				printf( "ERROR: %d\n", err );
+			}
+		}
 		if( res )
 		{
 			display( ping_payload, rl );
 		}
+		OGUnlockSema( s_disp );
 	}
 	return 0;
 }
@@ -124,7 +141,7 @@ void ping(struct sockaddr_in *addr )
 			exit( 0 );
 		}
 
-		OGCreateThread( pingerthread, &s_exec[i] );
+		OGCreateThread( pingerthread, &pinghandles[i] );
 	}
 	//This function is executed as a thread after setup.
 
@@ -132,7 +149,7 @@ void ping(struct sockaddr_in *addr )
 	{
 		if( i >= PINGTHREADS-1 ) i = 0;
 		else i++;
-		OGUnlockSema( s_exec[i] );
+		OGUnlockSema( s_ping );
 		OGUSleep( (int)(pingperiodseconds * 1000000) );
 	}
 }
