@@ -8,7 +8,6 @@
 #include <malloc.h> //for alloca
 
 static HBITMAP lsBitmap;
-static HINSTANCE lhInstance;
 static HWND lsHWND;
 static HDC lsWindowHDC;
 static HDC lsHDC;
@@ -63,8 +62,8 @@ void CNFGUpdateScreenWithBitmap( unsigned long * data, int w, int h )
 {
 	RECT r;
 
-	int a = SetBitmapBits(lsBitmap,w*h*4,data);
-	a = BitBlt(lsWindowHDC, 0, 0, w, h, lsHDC, 0, 0, SRCCOPY);
+	SetBitmapBits(lsBitmap,w*h*4,data);
+	BitBlt(lsWindowHDC, 0, 0, w, h, lsHDC, 0, 0, SRCCOPY);
 	UpdateWindow( lsHWND );
 
 	int thisw, thish;
@@ -212,7 +211,7 @@ void CNFGSetup( const char * name_of_window, int width, int height )
 
 void CNFGHandleInput()
 {
-	int ldown = 0;
+	//int ldown = 0;
 
 	MSG msg;
 	while( PeekMessage( &msg, lsHWND, 0, 0xFFFF, 1 ) )

@@ -227,17 +227,6 @@ static void * PingRunner( void * v )
 
 int StartHTTPing( const char * addy, double minperiod )
 {
-
-#ifdef WIN32
-	WSADATA wsaData;
-	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
-	if( r )
-	{
-		ERRM( "Fault in WSAStartup\n" );
-		exit( -2 );
-	}
-#endif
-
 	struct HTTPPingLaunch *hpl = malloc( sizeof( struct HTTPPingLaunch ) );
 	hpl->addy = addy;
 	hpl->minperiod = minperiod;

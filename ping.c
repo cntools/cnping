@@ -46,19 +46,9 @@ struct sockaddr_in psaddr;
 
 static og_sema_t s_disp;
 static og_sema_t s_ping;
-static og_sema_t s_exec[PINGTHREADS];
 
 void ping_setup()
 {
-#if defined( WIN32 ) || defined( WINDOWS )
-	WSADATA wsaData;
-	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
-	if( r )
-	{
-		ERRM( "Fault in WSAStartup\n" );
-		exit( -2 );
-	}
-#endif
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
 	//This function is executed first.

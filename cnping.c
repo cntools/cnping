@@ -50,6 +50,11 @@ int ExtraPingSize;
 int in_histogram_mode, in_frame_mode = 1;
 void HandleGotPacket( int seqno, int timeout );
 
+#if defined( WINDOWS ) || defined( WIN32 )
+WSADATA wsaData;
+#endif
+
+
 #define MAX_HISTO_MARKS (TIMEOUT*10000)
 uint64_t hist_counts[MAX_HISTO_MARKS];
 
@@ -619,8 +624,6 @@ int main( int argc, const char ** argv )
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
 #endif
 
-	srand( (int)(OGGetAbsoluteTime()*100000) );
-
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
 		pattern[i] = rand();
@@ -716,6 +719,14 @@ int main( int argc, const char ** argv )
 		#endif
 		return -1;
 	}
+
+#if defined( WIN32 ) || defined( WINDOWS )
+	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
+	{
+		ERRM( "Fault in WSAStartup\n" );
+		exit( -2 );
+	}
+#endif
  
 	CNFGSetup( title, 320, 155 );
 
