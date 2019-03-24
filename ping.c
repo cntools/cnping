@@ -50,8 +50,6 @@ static og_sema_t s_exec[PINGTHREADS];
 
 void ping_setup()
 {
-	int i;
-
 #if defined( WIN32 ) || defined( WINDOWS )
 	WSADATA wsaData;
 	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
@@ -99,9 +97,9 @@ static void * pingerthread( void * v )
 			ICMP_ECHO_REPLY rply;
 			uint8_t err_data[16384];
 		} repl;
-		struct in_addr inet_addr( char * a );
+
 		DWORD res = IcmpSendEcho( ih,
-			psaddr.sin_addr, ping_payload, rl,
+			psaddr.sin_addr.s_addr, ping_payload, rl,
 			0, &repl, sizeof( repl ),
 			timeout_ms );
 		int err;

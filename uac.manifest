@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<!-- This is no longer needed if you compile with WIN_USE_NO_ADMIN_PING.  It is only required for raw packet access -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity version="1.0.0.0" processorArchitecture="X86" name="cnping" type="win32"/>
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">

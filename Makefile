@@ -1,8 +1,8 @@
 all : cnping searchnet
 
-CFLAGS:=$(CFLAGS) -g -I/opt/X11/include -Wall
+CFLAGS:=$(CFLAGS) -s -Os -I/opt/X11/include -Wall
 CXXFLAGS:=$(CFLAGS)
-LDFLAGS:=-g -L/opt/X11/lib/
+LDFLAGS:=-s -L/opt/X11/lib/
 
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
 #LDFLAGS:=$(LDFLAGS) -lGL
