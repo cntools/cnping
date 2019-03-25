@@ -139,8 +139,14 @@ void listener()
 		if( buf[9] != 1 ) continue; //ICMP
 		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
 
+		// sizeof(packet.hdr) + 20
+#ifdef __FreeBSD__
+		int offset = 48;
+#else
+		int offset = 28;
+#endif
 		if ( bytes > 0 )
-			display(buf + 28, bytes - 28 );
+			display(buf + offset, bytes - offset );
 		else
     {
 			ERRM("Error: recvfrom failed");
