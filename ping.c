@@ -27,11 +27,14 @@
 	#include <ws2tcpip.h>
 	#include <stdint.h>
 #else
+	#ifdef __FreeBSD__
+		#include <netinet/in.h>
+	#endif
 	#include <unistd.h>
 	#include <sys/socket.h>
 	#include <resolv.h>
 	#include <netdb.h>
-	#ifdef __APPLE__
+	#if defined(__APPLE__) || defined(__FreeBSD__)
 		#ifndef SOL_IP
 			#define SOL_IP IPPROTO_IP
 		#endif
@@ -69,8 +72,13 @@ int precise_ping;
 
 struct packet
 {
+#ifdef __FreeBSD__
+	struct icmp hdr;
+	unsigned char msg[PACKETSIZE-sizeof(struct icmp)];
+#else
 	struct icmphdr hdr;
 	unsigned char msg[PACKETSIZE-sizeof(struct icmphdr)];
+#endif
 };
 
 int sd;
@@ -166,12 +174,19 @@ void ping(struct sockaddr_in *addr )
 	{
 		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
 		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
-
+#ifdef __FreeBSD__
+		pckt.hdr.icmp_code = 0;
+		pckt.hdr.icmp_type = ICMP_ECHO;
+		pckt.hdr.icmp_id = pid;
+		pckt.hdr.icmp_seq = cnt++;
+		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#else
 		pckt.hdr.code = 0;
 		pckt.hdr.type = ICMP_ECHO;
 		pckt.hdr.un.echo.id = pid;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#endif
 
 		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr));
 
