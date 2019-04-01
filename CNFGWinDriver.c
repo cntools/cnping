@@ -106,7 +106,7 @@ LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 //This was from the article, too... well, mostly.
-void CNFGSetup( const char * name_of_window, int width, int height )
+int CNFGSetup( const char * name_of_window, int width, int height )
 {
 	static LPSTR szClassName = "MyClass";
 	RECT client, window;

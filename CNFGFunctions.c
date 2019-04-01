@@ -272,8 +272,12 @@ void CNFGDrawTextbox( int x, int y, const char * text, int textsize )
 }
 
 
-#ifdef CNFGOGL
+#if defined( CNFGOGL ) && !defined( HAS_XSHAPE )
 
+#ifdef _MSC_VER
+#include <windows.h>
+#pragma comment( lib, "OpenGL32.lib" )
+#endif
 #include <GL/gl.h>
 
 uint32_t CNFGColor( uint32_t RGB )
@@ -308,11 +312,14 @@ void CNFGTackSegment( short x1, short y1, short x2, short y2 )
 	{
 		glBegin( GL_POINTS );
 		glVertex2f( x1+.5, y1+.5 );
-		glEnd();		
+		glEnd();
 	}
 	else
 	{
-		glBegin( GL_LINES );
+		// GL_LINE misses the last pixel if the line is not continued
+		// due to the Diamond-exit rule so we use GL_LINE_LOOP which
+		// draws the line back and forth catching all the pixels.
+		glBegin( GL_LINE_LOOP );
 		glVertex2f( x1+.5, y1+.5 );
 		glVertex2f( x2+.5, y2+.5 );
 		glEnd();
@@ -350,5 +357,10 @@ void CNFGTackPoly( RDPoint * points, int verts )
 
 void CNFGInternalResize( short x, short y ) { }
 
+
+void CNFGSetLineWidth( short width )
+{
+	glLineWidth( width );
+}
 
 #endif
