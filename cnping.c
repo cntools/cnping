@@ -616,7 +616,7 @@ int main( int argc, const char ** argv )
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
 #endif
 
-	srand( (int)(OGGetAbsoluteTime()*100000) );
+	srand( (uintmax_t)(OGGetAbsoluteTime()*100000) );
 
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
