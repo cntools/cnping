@@ -91,9 +91,8 @@ void CNFGSetupFullscreen( const char * WindowName, int screen_no )
 	int screen = XDefaultScreen(CNFGDisplay);
 	int xpos, ypos;
 
-	if (!XShapeQueryExtension(CNFGDisplay, &event_basep, &error_basep))
-	{
-    	fprintf( stderr, "X-Server does not support shape extension" );
+	if (!XShapeQueryExtension(CNFGDisplay, &event_basep, &error_basep)) {
+		fprintf( stderr, "X-Server does not support shape extension\n" );
 		exit( 1 );
 	}
 
@@ -164,6 +163,11 @@ void CNFGTearDown()
 void CNFGSetup( const char * WindowName, int w, int h )
 {
 	CNFGDisplay = XOpenDisplay(NULL);
+	if ( !CNFGDisplay ) {
+		fprintf( stderr, "Could not get an X Display.\n%s", 
+				 "Are you in text mode or using SSH without X11-Forwarding?\n" );
+		exit( 1 );
+	}
 	atexit( CNFGTearDown );
 	XGetWindowAttributes( CNFGDisplay, RootWindow(CNFGDisplay, 0), &CNFGWinAtt );
 
