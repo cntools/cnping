@@ -5,7 +5,7 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
-#ifdef WIN32
+#if defined( WINDOWS ) || defined( WIN32 )
 #ifdef _MSC_VER
 #define strdup _strdup
 #endif
@@ -46,6 +46,11 @@ int current_cycle = 0;
 int ExtraPingSize;
 int in_histogram_mode, in_frame_mode = 1;
 void HandleGotPacket( int seqno, int timeout );
+
+#if defined( WINDOWS ) || defined( WIN32 )
+WSADATA wsaData;
+#endif
+
 
 #define MAX_HISTO_MARKS (TIMEOUT*10000)
 uint64_t hist_counts[MAX_HISTO_MARKS];
@@ -171,7 +176,7 @@ void HandleKey( int keycode, int bDown )
 		{
 			char   lpFilename[1024];
 			char   lpDirectory[1024];
-			GetCurrentDirectory( lpDirectory, 1023 );
+			GetCurrentDirectory( 1023, lpDirectory );
 			GetModuleFileNameA( GetModuleHandle(0), lpFilename, 1023 );
 
 			CreateProcessA( lpFilename, GetCommandLine(), 0, 0, 1, 0, 0, lpDirectory, 0, 0 );
@@ -507,7 +512,7 @@ int RegString( int write, char * data, DWORD len )
 	{
 		if( write )
 		{
-			RegSetValueExA( hKey, "history", 0, REG_SZ, data, len );
+			RegSetValueExA( hKey, "history", 0, REG_SZ, (uint8_t*)data, len );
 			return 0;
 		}
 		else
@@ -616,8 +621,6 @@ int main( int argc, const char ** argv )
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
 #endif
 
-	srand( (int)(OGGetAbsoluteTime()*100000) );
-
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
 		pattern[i] = rand();
@@ -710,6 +713,14 @@ int main( int argc, const char ** argv )
 		#endif
 		return -1;
 	}
+
+#if defined( WIN32 ) || defined( WINDOWS )
+	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
+	{
+		ERRM( "Fault in WSAStartup\n" );
+		exit( -2 );
+	}
+#endif
  
 	CNFGSetup( title, 320, 155 );
 
