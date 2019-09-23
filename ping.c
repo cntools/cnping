@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ping.h"
-#include "os_generic.h"
+#include "rawdraw/os_generic.h"
 #include "error_handling.h"
 
 #ifdef TCC
@@ -149,7 +149,6 @@ void ping(struct sockaddr_in *addr )
 //The normal way to do it - only problem is Windows needs admin privs.
 
 
-
 #ifdef WIN32
 	#include <winsock2.h>
 	#define SOL_IP		0
@@ -165,11 +164,14 @@ void ping(struct sockaddr_in *addr )
 	#include <ws2tcpip.h>
 	#include <stdint.h>
 #else
+	#ifdef __FreeBSD__
+		#include <netinet/in.h>
+	#endif
 	#include <unistd.h>
 	#include <sys/socket.h>
 	#include <resolv.h>
 	#include <netdb.h>
-	#ifdef __APPLE__
+	#if defined(__APPLE__) || defined(__FreeBSD__)
 		#ifndef SOL_IP
 			#define SOL_IP IPPROTO_IP
 		#endif
@@ -205,8 +207,13 @@ struct icmphdr
 
 struct packet
 {
+#ifdef __FreeBSD__
+	struct icmp hdr;
+	unsigned char msg[PACKETSIZE-sizeof(struct icmp)];
+#else
 	struct icmphdr hdr;
 	unsigned char msg[PACKETSIZE-sizeof(struct icmphdr)];
+#endif
 };
 
 int sd;
@@ -265,8 +272,14 @@ void listener()
 		if( buf[9] != 1 ) continue; //ICMP
 		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
 
+		// sizeof(packet.hdr) + 20
+#ifdef __FreeBSD__
+		int offset = 48;
+#else
+		int offset = 28;
+#endif
 		if ( bytes > 0 )
-			display(buf + 28, bytes - 28 );
+			display(buf + offset, bytes - offset );
 		else
     {
 			ERRM("Error: recvfrom failed");
@@ -301,12 +314,19 @@ void ping(struct sockaddr_in *addr )
 	{
 		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
 		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
-
+#ifdef __FreeBSD__
+		pckt.hdr.icmp_code = 0;
+		pckt.hdr.icmp_type = ICMP_ECHO;
+		pckt.hdr.icmp_id = pid;
+		pckt.hdr.icmp_seq = cnt++;
+		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#else
 		pckt.hdr.code = 0;
 		pckt.hdr.type = ICMP_ECHO;
 		pckt.hdr.un.echo.id = pid;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#endif
 
 		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr));
 

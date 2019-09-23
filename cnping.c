@@ -11,6 +11,10 @@
 #endif
 #include <windows.h>
 #else
+  #ifdef __FreeBSD__
+    #include <sys/types.h>
+    #include <netinet/in.h>
+  #endif
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
@@ -18,8 +22,8 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
-#include "CNFGFunctions.h"
-#include "os_generic.h"
+#include "rawdraw/CNFGFunctions.h"
+#include "rawdraw/os_generic.h"
 #include "ping.h"
 #include "error_handling.h"
 #include "httping.h"
@@ -620,6 +624,8 @@ int main( int argc, const char ** argv )
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
 #endif
+
+	srand( (uintmax_t)(OGGetAbsoluteTime()*100000) );
 
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
