@@ -18,8 +18,8 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
-#include "CNFGFunctions.h"
-#include "os_generic.h"
+#include "rawdraw/CNFGFunctions.h"
+#include "rawdraw/os_generic.h"
 #include "ping.h"
 #include "error_handling.h"
 #include "httping.h"
