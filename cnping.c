@@ -11,6 +11,10 @@
 #endif
 #include <windows.h>
 #else
+  #ifdef __FreeBSD__
+    #include <sys/types.h>
+    #include <netinet/in.h>
+  #endif
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
