@@ -14,7 +14,7 @@ MINGW32:=i686-w64-mingw32-
 ADMINFLAGS:= $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
 
 cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c rawdraw/os_generic.c ping.c httping.c
-	$(MINGW32)windres resources.rc -o resources.o
+	$(MINGW32)windres resources.rc -o resources.o $(ADMINFLAGS)
 	$(MINGW32)gcc -g -fno-ident -mwindows -m32 $(CFLAGS) resources.o -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -DMINGW_BUILD $(ADMINFLAGS)
 
 cnping : cnping.o rawdraw/CNFGFunctions.o rawdraw/CNFGXDriver.o rawdraw/os_generic.o ping.o httping.o
