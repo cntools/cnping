@@ -3,7 +3,7 @@ all : cnping searchnet
 CFLAGS:=$(CFLAGS) -s -Os -I/opt/X11/include -Wall
 CXXFLAGS:=$(CFLAGS)
 LDFLAGS:=-s -L/opt/X11/lib/
-CC:=gcc
+CC?=gcc
 
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
 #LDFLAGS:=$(LDFLAGS) -lGL
