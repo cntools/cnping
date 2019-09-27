@@ -27,7 +27,7 @@ cnping : cnping.o rawdraw/CNFGFunctions.o rawdraw/CNFGXDriver.o ping.o httping.o
 cnping_mac : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGCocoaCGDriver.m ping.c httping.o
 	$(CC) -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
 
-searchnet : rawdraw/os_generic.o ping.o searchnet.o
+searchnet : ping.o searchnet.o
 	$(CC) $(CFLAGS) -o $@ $^ -lpthread
 
 linuxinstall : cnping

@@ -179,6 +179,9 @@ void ping(struct sockaddr_in *addr )
 	#include <netinet/ip.h>
 	#include <netinet/ip_icmp.h>
 #endif
+
+#include "rawdraw/os_generic.h"
+
 #if defined WIN32 || defined __APPLE__
 struct icmphdr
 {
