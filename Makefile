@@ -1,15 +1,14 @@
 all : cnping searchnet
 
-CFLAGS:=$(CFLAGS) -s -Os -I/opt/X11/include -Wall
-CXXFLAGS:=$(CFLAGS)
-LDFLAGS:=-s -L/opt/X11/lib/
+CFLAGS?=-s -Os -I/opt/X11/include -Wall
+LDFLAGS?=-s -L/opt/X11/lib/
 CC?=gcc
 
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
 #LDFLAGS:=$(LDFLAGS) -lGL
 
 #MINGW32:=/usr/bin/i686-w64-mingw32-
-MINGW32:=i686-w64-mingw32-
+MINGW32?=i686-w64-mingw32-
 
 #If you don't need admin priveleges
 ADMINFLAGS:= $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
