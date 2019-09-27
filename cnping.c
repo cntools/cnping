@@ -1,4 +1,6 @@
-//Copyright (c) 2011-2014 <>< Charles Lohr - Under the MIT/x11 or NewBSD License you choose.
+//Copyright (c) 2011-2019 <>< Charles Lohr - Under the MIT/x11 or NewBSD License you choose.
+
+#define VERSION "1.0-pre"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -692,7 +694,7 @@ int main( int argc, const char ** argv )
 
 	if( title[0] == 0 )
 	{
-		sprintf( title, "%s - cnping", pinghost );
+		sprintf( title, "%s - cnping "VERSION, pinghost );
 	}
 
 	if( GuiYScaleFactor > 0 )
@@ -708,9 +710,9 @@ int main( int argc, const char ** argv )
 	if( displayhelp )
 	{
 		#ifdef WIN32
-		ERRM( "Need at least a host address to ping.\n" );
+		ERRM( "cnping "VERSION" Need at least a host address to ping.\n" );
 		#else
-		ERRM( "Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
+		ERRM( "cnping "VERSION" Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
 			"   (-h) [host]                 -- domain, IP address of ping target for ICMP or http host, i.e. http://google.com\n"
 			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
