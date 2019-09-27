@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "ping.h"
-#include "rawdraw/os_generic.h"
 #include "error_handling.h"
 
 #ifdef TCC
@@ -27,12 +26,13 @@ struct sockaddr_in psaddr;
 	//...
 #else
 #include <inaddr.h>
-#include <winsock2.h>
-#include <windows.h>
 #include <ws2tcpip.h>
 #include <ipexport.h>
 #include <icmpapi.h>
+#include <windows.h>
 #endif
+
+#include "rawdraw/os_generic.h"
 
 
 

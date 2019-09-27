@@ -34,7 +34,7 @@ void CNFGClearFrame();
 void CNFGSwapBuffers();
 
 void CNFGGetDimensions( short * x, short * y );
-void CNFGSetup( const char * WindowName, int w, int h );
+int CNFGSetup( const char * WindowName, int w, int h ); //return 0 if ok.
 void CNFGSetupFullscreen( const char * WindowName, int screen_number );
 void CNFGHandleInput();
 
@@ -54,6 +54,16 @@ void CNFGInternalResize( short x, short y ); //don't call this.
 void   CNFGSetVSync( int vson );
 void * CNFGGetExtension( const char * extname );
 #endif
+
+//Also not available on all systems.  Transparency.
+void	CNFGPrepareForTransparency();
+void	CNFGDrawToTransparencyMode( int transp );
+void	CNFGClearTransparencyLevel();
+
+//Only available on systems that support it.
+void	CNFGSetLineWidth( short width );
+void	CNFGChangeWindowTitle( const char * windowtitle );
+void	CNFGSetWindowIconData( int w, int h, uint32_t * data );
 
 #ifdef __cplusplus
 };
