@@ -158,14 +158,14 @@ int load_ping_packet( uint8_t * buffer, int bufflen )
 void * PingListen( void * r )
 {
 	listener();
-	printf( "Fault on listen.\n" );
+	ERRM( "Fault on listen.\n" );
 	exit( -2 );
 }
 
 void * PingSend( void * r )
 {
 	do_pinger( pinghost );
-	printf( "Fault on ping.\n" );
+	ERRM( "Fault on ping.\n" );
 	exit( -1 );
 }
 
@@ -709,16 +709,12 @@ int main( int argc, const char ** argv )
 
 	if( displayhelp )
 	{
-		#ifdef WIN32
-		ERRM( "cnping "VERSION" Need at least a host address to ping.\n" );
-		#else
 		ERRM( "cnping "VERSION" Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
 			"   (-h) [host]                 -- domain, IP address of ping target for ICMP or http host, i.e. http://google.com\n"
 			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
 			"   (-t) [window title]         -- the title of the window (optional)\n");
-		#endif
 		return -1;
 	}
 

@@ -13,9 +13,13 @@ MINGW32?=i686-w64-mingw32-
 #If you don't need admin priveleges
 ADMINFLAGS:= $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
 
-cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c
+cnping-wingdi.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c
 	$(MINGW32)windres resources.rc -o resources.o $(ADMINFLAGS)
 	$(MINGW32)gcc -g -fno-ident -mwindows -m32 $(CFLAGS) resources.o -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -DMINGW_BUILD $(ADMINFLAGS)
+
+cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c
+	$(MINGW32)windres resources.rc -o resources.o $(ADMINFLAGS)
+	$(MINGW32)gcc -g -fno-ident -mwindows -m32 -DCNFGOGL $(CFLAGS)  resources.o -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -lopengl32 -DMINGW_BUILD $(ADMINFLAGS)
 
 cnping : cnping.o rawdraw/CNFGFunctions.o rawdraw/CNFGXDriver.o ping.o httping.o
 	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS)

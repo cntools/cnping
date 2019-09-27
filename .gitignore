@@ -1,5 +1,4 @@
 *.o
-*.exe
 cnping
 cnping-mousey
 searchnet
