@@ -1,0 +1,19 @@
+language: c
+before_install:
+- sudo apt-get -qq update
+- sudo apt-get install -y make libxinerama-dev libxext-dev libx11-dev build-essential
+  binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
+script: make cnping cnping.exe
+  
+deploy:
+  provider: releases
+  api_key:
+    secure: "iGexfXEEUlID8jiIFaly4RcWBS1iFiT2jTtwLEExz0tBMxZuvpvS+MfZMtXt3YTI1NsbY/B/1tfO2CueEfIWW/d8mmCxf1E/VerfxA1j0NgRc3br6L1nFxbkwEiHtsHO5sYf4QGlqgzipfW2u/cp4nO8pme4jGStMTSZxyTSJPAuWT+4qiyDeay4QGLkigplW9570xKVgejX0hBm7zuw7R8QdnRvIftyvvbQiRqnLoYPPDc1PSOxLfdfNTAoUikbMuOkiN1XI3s3mytTYKCiUa3Zxj1BS35AEPCxaQoOr0iyY+jBFZrwdvPOTAD8VsAGRzjvQ0NldnuIZlXJnFAvtwjxRIIS2rPaLqC79lphaw2j0564tDY0p+j1MhVBt1wjAkRg/Dh2R1SzcO3baxJH6MHKCGS1lUxkUgW0kBoKaIw/DzfnXHx5EsJPbyLeksyLf8XzYCTPMaVJEQK30b0TM5OOEcwCrtAjwX9IiIXAgZiGyw7E4CuKWU+RfZRee8IvhF0qs5DIn0yiCmvYIMYZvX9rL6mm1Wn1Hb7+o4bxHzMmuFmo9HJfgYOzoIhBmr3Q1DIbH/UHcqeFWrP/Dz47easv3GRSbnXcbyh8G0d7mFheO+9JdAnoGBzr1Ig5Eeq0Q1ppjP7jCQuPJQ9EP3uJHStQlIVJse95PZD+TyP8LW4="
+  file: 
+    - cnping.exe
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: cntools/cnping
+    branch: master
+  draft: true
