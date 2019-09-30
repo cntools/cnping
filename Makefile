@@ -24,6 +24,9 @@ cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c htt
 cnping : cnping.o rawdraw/CNFGFunctions.o rawdraw/CNFGXDriver.o ping.o httping.o
 	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS)
 
+cnping_ogl : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGXDriver.c ping.c httping.c
+	$(CC) $(CFLAGS) -o $@ $^ -DCNFGOGL $(CFLAGS) -s -lX11 -lm -lpthread $(LDFLAGS) -lGL
+
 cnping_mac : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGCocoaCGDriver.m ping.c httping.o
 	$(CC) -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread
 
