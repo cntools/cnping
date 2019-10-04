@@ -1,6 +1,6 @@
 //Copyright (c) 2011-2019 <>< Charles Lohr - Under the MIT/x11 or NewBSD License you choose.
 
-#define VERSION "1.0b3"
+#define VERSION "1.0.0"
 
 #include <stdio.h>
 #include <stdlib.h>
