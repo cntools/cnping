@@ -1,4 +1,6 @@
 language: c
+dist: bionic
+
 before_install:
 - sudo apt-get -qq update
 - sudo apt-get install -y make libxinerama-dev libxext-dev libx11-dev build-essential
