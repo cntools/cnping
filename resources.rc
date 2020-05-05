@@ -6,7 +6,7 @@
 
 LANGUAGE 9, SUBLANG_DEFAULT
 IPDialog DIALOG 10, 10, 340, 100
-STYLE WS_CAPTION | WS_SYSMENU
+STYLE WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "cnping"
 BEGIN
     LTEXT           "Usage: cnping [host] [period] [extra size] [y-axis scaling]",                        0, 90, 0, 300, 20, SS_LEFT
