@@ -1,5 +1,3 @@
-all : cnping searchnet
-
 CFLAGS?=-s -Os -I/opt/X11/include -Wall
 LDFLAGS?=-s -L/opt/X11/lib/
 CC?=gcc
@@ -7,19 +5,31 @@ CC?=gcc
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
 #LDFLAGS:=$(LDFLAGS) -lGL
 
+clean :
+	rm -rf *.o *~ cnping cnping.exe cnping_mac searchnet
+	rm -rf rawdraw/*.o
+
+
+# Windows
+
 #MINGW32:=/usr/bin/i686-w64-mingw32-
 MINGW32?=i686-w64-mingw32-
 
-#If you don't need admin priveleges
+# If you don't need admin privileges
 ADMINFLAGS:= $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
 
-cnping-wingdi.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c
-	$(MINGW32)windres resources.rc -o resources.o $(ADMINFLAGS)
-	$(MINGW32)gcc -g -fno-ident -mwindows -m32 $(CFLAGS) resources.o -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -DMINGW_BUILD $(ADMINFLAGS)
+cnping-wingdi.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c resources.o
+	$(MINGW32)gcc -g -fno-ident -mwindows -m32 $(CFLAGS) -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -DMINGW_BUILD $(ADMINFLAGS)
 
-cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c
+cnping.exe : cnping.c rawdraw/CNFGFunctions.c rawdraw/CNFGWinDriver.c ping.c httping.c resources.o
+	$(MINGW32)gcc -g -fno-ident -mwindows -m32 -DCNFGOGL $(CFLAGS) -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -lopengl32 -DMINGW_BUILD $(ADMINFLAGS)
+
+resources.o : resources.rc
 	$(MINGW32)windres resources.rc -o resources.o $(ADMINFLAGS)
-	$(MINGW32)gcc -g -fno-ident -mwindows -m32 -DCNFGOGL $(CFLAGS)  resources.o -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -lopengl32 -DMINGW_BUILD $(ADMINFLAGS)
+
+
+# Unix
+all : cnping searchnet
 
 cnping : cnping.o rawdraw/CNFGFunctions.o rawdraw/CNFGXDriver.o ping.o httping.o
 	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS)
@@ -40,6 +50,3 @@ linuxinstall : cnping
 #	sudo chmod +t /usr/local/bin/cnping  #One option - set the stuid bit.
 #	sudo install cnping /usr/local/bin/  #Another option - using install.
 
-clean : 
-	rm -rf *.o *~ cnping cnping.exe cnping_mac searchnet
-	rm -rf rawdraw/*.o
