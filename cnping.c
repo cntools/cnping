@@ -24,8 +24,9 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
-#include "rawdraw/CNFGFunctions.h"
+#define CNFG_IMPLEMENTATION
 #include "rawdraw/os_generic.h"
+#include "rawdraw/CNFG.h"
 #include "ping.h"
 #include "error_handling.h"
 #include "httping.h"
