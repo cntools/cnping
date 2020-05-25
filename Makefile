@@ -2,7 +2,7 @@ CFLAGS?=-s -Os -I/opt/X11/include -Wall
 LDFLAGS?=-s -L/opt/X11/lib/
 CC?=gcc
 
-all : cnping cnping.exe
+all : cnping
 
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
 #LDFLAGS:=$(LDFLAGS) -lGL
@@ -34,7 +34,7 @@ resources.o : resources.rc
 all : cnping searchnet
 
 cnping : cnping.c ping.c httping.c
-	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread $(LDFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread -lGL $(LDFLAGS)
 
 cnping_ogl : cnping.c ping.c httping.c
 	$(CC) $(CFLAGS) -o $@ $^ -DCNFGOGL $(CFLAGS) -s -lX11 -lm -lpthread $(LDFLAGS) -lGL

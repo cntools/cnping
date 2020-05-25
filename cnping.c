@@ -24,6 +24,9 @@
 #include <sys/select.h>
 #include <netdb.h>
 #endif
+
+#define CNFGOGL
+
 #define CNFG_IMPLEMENTATION
 #include "rawdraw/os_generic.h"
 #include "rawdraw/CNFG.h"
