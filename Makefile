@@ -31,7 +31,6 @@ resources.o : resources.rc
 
 
 # Unix
-all : cnping searchnet
 
 cnping : cnping.c ping.c httping.c
 	$(CC) $(CFLAGS) -o $@ $^ -lX11 -lm -lpthread -lGL $(LDFLAGS)
