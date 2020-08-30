@@ -21,24 +21,34 @@ If a regular hostname is requested instead, ICMP (regular ping) will be used.
 
 This allows cnping to be operated in environments where ICMP is prohibited by local computer or network policies.
 
-## Installation:  
+## Installation
 
-### Ubuntu:  
+### Ubuntu
 
 ```
-sudo apt install libxinerama-dev libxext-dev libx11-dev build-essential
+sudo apt install libxinerama-dev libxext-dev libx11-dev build-essential mesa-common-dev libglvnd-dev
 make linuxinstall
 ```
 
-'linuxinstall' builds the tool and copies it to your usr/local/bin folder, and sets the sticky bit or appropriate permissions allowing it to run as though it were root, allowing it to create raw sockets.
+'linuxinstall' builds the tool, copies it to your /usr/local/bin folder, and sets the cap_net_raw capability allowing it to create raw sockets without being root.
 
 ```
 sudo cp cnping /usr/local/bin/
-sudo chmod +s /usr/local/bin/cnping
+sudo setcap cap_net_raw+ep /usr/local/bin/cnping
 ```
 
-Note that if only http pinging is requested, you do not need root access.
+Note that if only http pinging is requested, you do not need cap_net_raw or root access.
 
-### Archlinux:
+### Archlinux
 
  [cnping-git](https://aur.archlinux.org/packages/cnping-git/) in the [Arch User Repository](https://wiki.archlinux.org/index.php/Arch_User_Repository)
+
+
+### Windows
+
+A Windows-exe can be cross compiled on Linux, just install the necessary dependencies and compile it:
+
+```
+sudo apt install binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
+make cnping.exe
+```
