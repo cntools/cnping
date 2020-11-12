@@ -30,6 +30,10 @@
 #define CNFG_IMPLEMENTATION
 #include "rawdraw/os_generic.h"
 #include "rawdraw/CNFG.h"
+#define RDUI_IMPLEMENTATION
+#include "rdui/RDUI.h"
+#include "rdui/default-elements.h"
+
 #include "ping.h"
 #include "error_handling.h"
 #include "httping.h"
@@ -178,6 +182,8 @@ void * PingSend( void * r )
 
 void HandleKey( int keycode, int bDown )
 {
+  RDUIHandleKeyImpl( keycode, bDown );
+
 	switch( keycode )
 	{
 
@@ -217,8 +223,12 @@ void HandleKey( int keycode, int bDown )
 
 	}
 }
-void HandleButton( int x, int y, int button, int bDown ){}
-void HandleMotion( int x, int y, int mask ){}
+void HandleButton( int x, int y, int button, int bDown ){
+  RDUIHandleButtonImpl( x, y, button, bDown );
+}
+void HandleMotion( int x, int y, int mask ){
+  RDUIHandleMotionImpl( x, y, mask );
+}
 void HandleDestroy() { exit(0); }
 
 
@@ -617,15 +627,33 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 	return 0;
 }
 #endif
+
+char title[1024];
+int i;
+double ThisTime;
+double LastFPSTime;
+double LastFrameTime;
+double SecToWait;
+double frameperiodseconds;
+char ready;
+
+void FieldTypeHandler( struct RDUIFieldData *data ) {
+	pinghost = data->value;
+}
+
+void ContinueStarting();
+
+void PingButtonClickHandler( struct RDUIButtonData *data ) {
+	ready = 1;
+	ContinueStarting();
+}
+
 int main( int argc, const char ** argv )
 {
-	char title[1024];
-	int i;
-	double ThisTime;
-	double LastFPSTime = OGGetAbsoluteTime();
-	double LastFrameTime = OGGetAbsoluteTime();
-	double SecToWait;
-	double frameperiodseconds;
+	LastFPSTime = OGGetAbsoluteTime();
+	LastFrameTime = OGGetAbsoluteTime();
+
+	RDUIInit();
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -639,20 +667,12 @@ int main( int argc, const char ** argv )
 	}
 	CNFGBGColor = 0x800000;
 	CNFGDialogColor = 0x444444;
-#ifdef WIN32
-	if( argc < 2 )
-	{
-		DialogBox(0, "IPDialog", 0, TextEntry );
-		argc = glargc;
-		argv = glargv;
-	}
-#endif
 
 	pingperiodseconds = 0.02;
 	ExtraPingSize = 0;
 	title[0] = 0;
 	GuiYScaleFactor = 0;
-  
+
 	//We need to process all the unmarked parameters.
 	int argcunmarked = 1;
 	int displayhelp = 0;
@@ -719,7 +739,6 @@ int main( int argc, const char ** argv )
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
 			"   (-t) [window title]         -- the title of the window (optional)\n");
-		return -1;
 	}
 
 #if defined( WIN32 ) || defined( WINDOWS )
@@ -729,9 +748,56 @@ int main( int argc, const char ** argv )
 		exit( -2 );
 	}
 #endif
- 
 	CNFGSetup( title, 320, 155 );
 
+	if( argc < 2 )
+	{
+		struct RDUIFieldData field_data = {
+			.padding = 5,
+			.font_size = 5,
+			.min_width = 300,
+			.max_width = 1000,
+			.position = {
+				.x = 10,
+				.y = 10
+			},
+			.border_color = 0x000000,
+
+			.type_handler = FieldTypeHandler
+		};
+
+		struct RDUIButtonData button_data = {
+			.text = "Ping",
+			.text_size = 5,
+			.padding = 5,
+			.color = 0x555555,
+			.text_color = 0xffffff,
+			.position = {
+				.x = 10,
+				.y = 100
+			},
+
+			.clicked_handler = PingButtonClickHandler
+		};
+
+		RDUIPushChild( RDUIRootNode, RDUINewField( &field_data ) );
+		RDUIPushChild( RDUIRootNode, RDUINewButton( &button_data ) );
+
+		CNFGBGColor = 0xffffff;
+		while(!ready) { // run in a simple pre-boot mode
+			CNFGHandleInput();
+
+			CNFGClearFrame();
+
+			RDUIDispatchEvent(RDUIEvent_render, NULL);
+
+			CNFGSwapBuffers();
+		}
+	} else ContinueStarting();
+}
+
+void ContinueStarting() {
+	CNFGBGColor = 0x0000ff;
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
 		StartHTTPing( pinghost+7, pingperiodseconds );
@@ -742,7 +808,6 @@ int main( int argc, const char ** argv )
 		OGCreateThread( PingSend, 0 );
 		OGCreateThread( PingListen, 0 );
 	}
-
 
 	frameperiodseconds = fmin(.2, fmax(.03, pingperiodseconds));
 
@@ -794,6 +859,5 @@ int main( int argc, const char ** argv )
 			OGUSleep( (int)( SecToWait * 1000000 ) );
 	}
 
-	return(0);
+	exit(0);
 }
-
