@@ -780,8 +780,8 @@ int main( int argc, const char ** argv )
 			.clicked_handler = PingButtonClickHandler
 		};
 
-		RDUIPushChild( RDUIRootNode, RDUINewField( &field_data ) );
-		RDUIPushChild( RDUIRootNode, RDUINewButton( &button_data ) );
+		RDUIPushNode( RDUINewField( &field_data ) );
+		RDUIPushNode( RDUINewButton( &button_data ) );
 
 		CNFGBGColor = 0xffffff;
 		while(!ready) { // run in a simple pre-boot mode
