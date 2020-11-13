@@ -4,3 +4,4 @@
 [submodule "rdui"]
 	path = rdui
 	url = https://github.com/overlisted/rdui
+	branch = v0.1
