@@ -768,10 +768,10 @@ int main( int argc, const char ** argv )
 
 		struct RDUIButtonData button_data = {
 			.text = "Ping",
-			.text_size = 5,
+			.font_size = 5,
 			.padding = 5,
 			.color = 0x555555,
-			.text_color = 0xffffff,
+			.font_color = 0xffffff,
 			.position = {
 				.x = 10,
 				.y = 100
