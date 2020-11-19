@@ -25,7 +25,9 @@
 #include <netdb.h>
 #endif
 
+#ifndef CNFGOGL
 #define CNFGOGL
+#endif
 
 #define CNFG_IMPLEMENTATION
 #include "rawdraw/os_generic.h"
@@ -638,7 +640,6 @@ int main( int argc, const char ** argv )
 		pattern[i] = rand();
 	}
 	CNFGBGColor = 0x800000;
-	CNFGDialogColor = 0x444444;
 #ifdef WIN32
 	if( argc < 2 )
 	{
