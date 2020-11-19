@@ -1,5 +1,5 @@
-cnping
-======
+cnping - Now with RDUI!
+=======================
 
 Minimal Graphical IPV4 Ping/HTTP Ping Tool.  (also comes with searchnet, like nmap but smaller and simpler).  It uses rawdraw so it is OS independent.
 ```
