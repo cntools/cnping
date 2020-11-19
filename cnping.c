@@ -721,11 +721,6 @@ int main( int argc, const char ** argv )
 		GuiYscaleFactorIsConstant = 1;
 	}
 
-	if( !pinghost )
-	{
-		displayhelp = 1;
-	}
-
 	if( displayhelp )
 	{
 		ERRM( "cnping "VERSION" Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
