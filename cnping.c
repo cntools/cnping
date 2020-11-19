@@ -716,11 +716,6 @@ int main( int argc, const char ** argv )
 		}
 	}
 
-	if( title[0] == 0 )
-	{
-		sprintf( title, "%s - cnping "VERSION, pinghost );
-	}
-
 	if( GuiYScaleFactor > 0 )
 	{
 		GuiYscaleFactorIsConstant = 1;
@@ -748,7 +743,7 @@ int main( int argc, const char ** argv )
 		exit( -2 );
 	}
 #endif
-	CNFGSetup( title, 320, 155 );
+	CNFGSetup( "Specify the host", 320, 155 );
 
 	if( argc < 2 )
 	{
@@ -797,6 +792,12 @@ int main( int argc, const char ** argv )
 }
 
 void ContinueStarting() {
+	if( title[0] == 0 )
+	{
+		sprintf( title, "%s - cnping "VERSION, pinghost );
+	}
+
+	CNFGChangeWindowTitle(title);
 	CNFGBGColor = 0x0000ff;
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
