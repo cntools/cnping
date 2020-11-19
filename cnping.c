@@ -784,7 +784,7 @@ int main( int argc, const char ** argv )
 
 			CNFGClearFrame();
 
-			RDUIDispatchEvent(RDUIEvent_render, NULL);
+			RDUIDispatchEvent( RDUIEvent_render, NULL );
 
 			CNFGSwapBuffers();
 		}
