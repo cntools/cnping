@@ -702,6 +702,9 @@ int main( int argc, const char ** argv )
 				default: displayhelp = 1; break;
 			}
 		}
+		else if(!strcmp(thisargv, "--help")) {
+			displayhelp = 1;
+		}
 		else
 		{
 			//Unmarked fields
@@ -730,6 +733,7 @@ int main( int argc, const char ** argv )
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
 			"   (-t) [window title]         -- the title of the window (optional)\n");
+		exit(0);
 	}
 
 #if defined( WIN32 ) || defined( WINDOWS )
