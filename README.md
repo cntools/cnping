@@ -11,9 +11,7 @@ Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]
 	 [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)
 	 [window title]         -- the title of the window (optional)
 ```
-Picture:
-
-<IMG SRC=cnping.png>
+<IMG SRC=https://i.imgur.com/Yj5coKN.gif>
 
 If an http host is listed, the default request is ```HEAD /favicon.ico HTTP/1.1``` since this is usually a very fast, easy operation for the server.  If a specific file or uri is requested, that will be requested instead, i.e. http://github.com/cnlohr will request ```HEAD /cnlohr HTTP/1.1```.
 
