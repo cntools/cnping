@@ -323,7 +323,7 @@ void DrawFrameHistogram()
 
 		for( i = 0; i < rslots; i++ )
 		{
-			CNFGColor( 0x33cc33 );
+			CNFGColor( 0x33cc33ff );
 			int top = 30;
 			uint64_t samps = samples[i];
 			int bottom = screeny - 50;
@@ -338,7 +338,7 @@ void DrawFrameHistogram()
 			}
 			else
 			{
-				CNFGColor( 0x8080ff );
+				CNFGColor( 0x8080ffff );
 			}
 			CNFGTackSegment( startx, bottom+1, endx, bottom+1 );
 
@@ -357,11 +357,11 @@ void DrawFrameHistogram()
 
 			if( !in_frame_mode )
 			{
-				CNFGColor( 0xffffff );
+				CNFGColor( 0xffffffff );
 			}
 			else
 			{
-				CNFGColor( 0x8080ff );
+				CNFGColor( 0x8080ffff );
 			}
 
 
@@ -420,7 +420,7 @@ void DrawFrame( void )
 
 		if( rt > st ) // ping received
 		{
-			CNFGColor( 0xffffff );
+			CNFGColor( 0xffffffff );
 			dt = rt - st;
 			dt *= 1000;
 			totaltime += dt;
@@ -479,7 +479,7 @@ void DrawFrame( void )
 	int avg_gui    = avg*GuiYScaleFactor;
 	int stddev_gui = stddev*GuiYScaleFactor;
 
-	CNFGColor( 0xff00 );
+	CNFGColor( 0xff0000ff );
 
 
 	int l = avg_gui;
@@ -752,7 +752,7 @@ int main( int argc, const char ** argv )
 		CNFGHandleInput();
 
 		CNFGClearFrame();
-		CNFGColor( 0xFFFFFF );
+		CNFGColor( 0xFFFFFFFF );
 		CNFGGetDimensions( &screenx, &screeny );
 
 		if( in_frame_mode )
@@ -766,7 +766,7 @@ int main( int argc, const char ** argv )
 		}
 
 		CNFGPenX = 100; CNFGPenY = 100;
-		CNFGColor( 0xff );
+		CNFGColor( 0xffffffff );
 		if( ping_failed_to_send )
 		{
 			CNFGDrawText( "Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?", 3 );
