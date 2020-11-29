@@ -1,4 +1,4 @@
-CFLAGS?=-s -Os -I/opt/X11/include -Wall
+CFLAGS?=-s -Os -I/opt/X11/include -Irdui -Wall
 LDFLAGS?=-s -L/opt/X11/lib/
 CC?=gcc
 
