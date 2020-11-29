@@ -637,8 +637,7 @@ int main( int argc, const char ** argv )
 	{
 		pattern[i] = rand();
 	}
-	CNFGBGColor = 0x800000;
-	CNFGDialogColor = 0x444444;
+	CNFGBGColor = 0x800000ff;
 #ifdef WIN32
 	if( argc < 2 )
 	{
