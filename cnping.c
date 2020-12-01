@@ -184,7 +184,7 @@ void * PingSend( void * r )
 
 void HandleKey( int keycode, int bDown )
 {
-  RDUIHandleKeyImpl( keycode, bDown );
+	RDUIHandleKeyImpl( menu, keycode, bDown );
 
 	switch( keycode )
 	{
@@ -226,10 +226,10 @@ void HandleKey( int keycode, int bDown )
 	}
 }
 void HandleButton( int x, int y, int button, int bDown ){
-  RDUIHandleButtonImpl( x, y, button, bDown );
+	RDUIHandleButtonImpl( menu, x, y, button, bDown );
 }
 void HandleMotion( int x, int y, int mask ){
-  RDUIHandleMotionImpl( x, y, mask );
+	RDUIHandleMotionImpl( menu, x, y, mask );
 }
 void HandleDestroy() { exit(0); }
 
