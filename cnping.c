@@ -788,6 +788,8 @@ int main( int argc, const char ** argv )
 
 		menu = RDUINewMenu( 2, RDUINewField( &field_data ), RDUINewButton( &button_data ) );
 
+		RDUIFocusedField = &field_data;
+
 		CNFGBGColor = 0xffffffff;
 		while(!ready) { // run in a simple pre-boot mode
 			CNFGHandleInput();
