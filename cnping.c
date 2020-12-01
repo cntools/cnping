@@ -42,6 +42,8 @@
 #include "error_handling.h"
 #include "httping.h"
 
+char ready;
+
 unsigned frames = 0;
 unsigned long iframeno = 0;
 short screenx, screeny;
@@ -182,14 +184,14 @@ void * PingSend( void * r )
 }
 
 
-
+void ContinueStarting();
 
 void HandleKey( int keycode, int bDown )
 {
 	OIHandleKey( keycode, bDown );
 	RDUIHandleKeyImpl( menu, keycode, bDown );
 
-	switch( keycode )
+	if( ready ) switch( keycode )
 	{
 
 #if defined( WIN32 ) || defined( WINDOWS )
@@ -226,6 +228,11 @@ void HandleKey( int keycode, int bDown )
 			exit(0);
 			break;
 
+	} else {
+		if( OIReadModifiers().ctrl && keycode == CNFG_KEY_ENTER ) {
+			ready = 1;
+			ContinueStarting();
+		}
 	}
 }
 void HandleButton( int x, int y, int button, int bDown ){
@@ -640,7 +647,6 @@ double LastFPSTime;
 double LastFrameTime;
 double SecToWait;
 double frameperiodseconds;
-char ready;
 
 void FieldTypeHandler( struct RDUIFieldData *data ) {
 	pinghost = data->value;
