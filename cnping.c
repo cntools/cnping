@@ -183,6 +183,7 @@ void * PingSend( void * r )
 	exit( -1 );
 }
 
+struct RDUIMenu* menu;
 
 void ContinueStarting();
 
@@ -785,8 +786,7 @@ int main( int argc, const char ** argv )
 			.clicked_handler = PingButtonClickHandler
 		};
 
-		RDUIPushNode( RDUINewField( &field_data ) );
-		RDUIPushNode( RDUINewButton( &button_data ) );
+		menu = RDUINewMenu( 2, RDUINewField( &field_data ), RDUINewButton( &button_data ) );
 
 		CNFGBGColor = 0xffffffff;
 		while(!ready) { // run in a simple pre-boot mode
@@ -794,7 +794,7 @@ int main( int argc, const char ** argv )
 
 			CNFGClearFrame();
 
-			RDUIDispatchEvent( RDUIEvent_render, NULL );
+			RDUIDispatchEvent( menu, RDUIEvent_render, NULL );
 
 			CNFGSwapBuffers();
 		}
