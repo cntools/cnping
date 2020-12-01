@@ -753,10 +753,10 @@ int main( int argc, const char ** argv )
 		exit( -2 );
 	}
 #endif
-	CNFGSetup( "Specify the host", 320, 155 );
 
 	if( argc < 2 )
 	{
+		CNFGSetup( "Specify the host", 320, 155 );
 		struct RDUIFieldData field_data = {
 			.padding = 5,
 			.font_size = 5,
@@ -807,7 +807,8 @@ void ContinueStarting() {
 		sprintf( title, "%s - cnping "VERSION, pinghost );
 	}
 
-	CNFGChangeWindowTitle(title);
+	CNFGSetup( title, 320, 155 );
+
 	CNFGBGColor = 0x0000ffff;
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
