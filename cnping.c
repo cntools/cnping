@@ -35,6 +35,8 @@
 #define RDUI_IMPLEMENTATION
 #include "rdui/RDUI.h"
 #include "rdui/default-elements.h"
+#define ONLYINPUT_IMPLEMENTATION
+#include "onlyinput/onlyinput.h"
 
 #include "ping.h"
 #include "error_handling.h"
@@ -184,6 +186,7 @@ void * PingSend( void * r )
 
 void HandleKey( int keycode, int bDown )
 {
+	OIHandleKey( keycode, bDown );
 	RDUIHandleKeyImpl( menu, keycode, bDown );
 
 	switch( keycode )
