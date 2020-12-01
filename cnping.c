@@ -765,7 +765,7 @@ int main( int argc, const char ** argv )
 				.x = 10,
 				.y = 10
 			},
-			.font_color = 0xffffffff,
+			.font_color = 0x000000ff,
 			.border_color = 0x000000ff,
 
 			.type_handler = FieldTypeHandler
