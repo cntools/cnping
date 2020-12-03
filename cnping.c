@@ -791,6 +791,7 @@ int main( int argc, const char ** argv )
 			},
 			.font_color = 0x000000ff,
 			.border_color = 0x000000ff,
+			.value = "0",
 
 			.type_handler = PacketSizeTypeHandler
 		};
@@ -806,6 +807,7 @@ int main( int argc, const char ** argv )
 			},
 			.font_color = 0x000000ff,
 			.border_color = 0x000000ff,
+			.value = "0.2",
 
 			.type_handler = PeriodTypeHandler
 		};
