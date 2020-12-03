@@ -649,8 +649,16 @@ double LastFrameTime;
 double SecToWait;
 double frameperiodseconds;
 
-void FieldTypeHandler( struct RDUIFieldData *data ) {
+void HostnameTypeHandler( struct RDUIFieldData *data ) {
 	pinghost = data->value;
+}
+
+void PacketSizeTypeHandler( struct RDUIFieldData *data ) {
+	ExtraPingSize = atoi(data->value);
+}
+
+void PeriodTypeHandler( struct RDUIFieldData *data ) {
+	pingperiodseconds = atof(data->value);
 }
 
 void ContinueStarting();
@@ -757,19 +765,49 @@ int main( int argc, const char ** argv )
 	if( argc < 2 )
 	{
 		CNFGSetup( "Specify the host", 320, 155 );
-		struct RDUIFieldData field_data = {
+		struct RDUIFieldData hostname_field_data = {
 			.padding = 5,
 			.font_size = 5,
 			.min_width = 300,
 			.max_width = 1000,
 			.position = {
 				.x = 10,
-				.y = 10
+				.y = 30
 			},
 			.font_color = 0x000000ff,
 			.border_color = 0x000000ff,
 
-			.type_handler = FieldTypeHandler
+			.type_handler = HostnameTypeHandler
+		};
+
+		struct RDUIFieldData packet_size_field_data = {
+			.padding = 5,
+			.font_size = 5,
+			.min_width = 300,
+			.max_width = 1000,
+			.position = {
+				.x = 10,
+				.y = 100
+			},
+			.font_color = 0x000000ff,
+			.border_color = 0x000000ff,
+
+			.type_handler = PacketSizeTypeHandler
+		};
+
+		struct RDUIFieldData period_field_data = {
+			.padding = 5,
+			.font_size = 5,
+			.min_width = 300,
+			.max_width = 1000,
+			.position = {
+				.x = 10,
+				.y = 170
+			},
+			.font_color = 0x000000ff,
+			.border_color = 0x000000ff,
+
+			.type_handler = PeriodTypeHandler
 		};
 
 		struct RDUIButtonData button_data = {
@@ -780,15 +818,15 @@ int main( int argc, const char ** argv )
 			.font_color = 0xffffffff,
 			.position = {
 				.x = 10,
-				.y = 100
+				.y = 220
 			},
 
 			.clicked_handler = PingButtonClickHandler
 		};
 
-		menu = RDUINewMenu( 2, RDUINewField( &field_data ), RDUINewButton( &button_data ) );
+		menu = RDUINewMenu( 4, RDUINewField( &hostname_field_data ), RDUINewField( &packet_size_field_data ), RDUINewField( &period_field_data ), RDUINewButton( &button_data ) );
 
-		RDUIFocusedField = &field_data;
+		RDUIFocusedField = &hostname_field_data;
 
 		CNFGBGColor = 0xffffffff;
 		while(!ready) { // run in a simple pre-boot mode
