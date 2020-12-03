@@ -834,6 +834,16 @@ int main( int argc, const char ** argv )
 
 			CNFGClearFrame();
 
+			CNFGColor(0x000000ff);
+			CNFGPenX = 10;
+			CNFGPenY = 10;
+			CNFGDrawText("Hostname", 3);
+			CNFGPenX = 10;
+			CNFGPenY = 80;
+			CNFGDrawText("Packet Size", 3);
+			CNFGPenX = 10;
+			CNFGPenY = 150;
+			CNFGDrawText("Period", 3);
 			RDUIDispatchEvent( menu, RDUIEvent_render, NULL );
 
 			CNFGSwapBuffers();
