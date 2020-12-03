@@ -764,7 +764,7 @@ int main( int argc, const char ** argv )
 
 	if( argc < 2 )
 	{
-		CNFGSetup( "Specify the host", 320, 155 );
+		CNFGSetup( "Configuration - cnping", 320, 270 );
 		struct RDUIFieldData hostname_field_data = {
 			.padding = 5,
 			.font_size = 5,
