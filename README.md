@@ -25,6 +25,9 @@ This allows cnping to be operated in environments where ICMP is prohibited by lo
 
 ```
 sudo apt install libxinerama-dev libxext-dev libx11-dev build-essential mesa-common-dev libglvnd-dev
+git clone https://github.com/cntools/cnping.git
+cd cnping/
+git submodule update --init --recursive
 make linuxinstall
 ```
 
