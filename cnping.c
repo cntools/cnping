@@ -664,6 +664,11 @@ void PeriodTypeHandler( struct RDUIFieldData *data ) {
 void ContinueStarting();
 
 void PingButtonClickHandler( struct RDUIButtonData *data ) {
+  if(pingperiodseconds == 0) {
+    puts("Specify a valid period.");
+    exit(1);
+  }
+
 	ready = 1;
 	ContinueStarting();
 }
