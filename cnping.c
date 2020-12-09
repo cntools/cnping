@@ -863,6 +863,7 @@ void ContinueStarting() {
 	}
 
 	CNFGSetup( title, 320, 155 );
+  CNFGSetLineWidth(1);
 
 	CNFGBGColor = 0x0000ffff;
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
