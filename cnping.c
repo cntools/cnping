@@ -251,13 +251,13 @@ double GetWindMaxPingTime( void )
 void DrawMainText( const char * stbuf )
 {
 	int x, y;
-	CNFGColor( 0x00 );
+	CNFGColor( 0x000000ff );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
 	{
 		CNFGPenX = 10+x; CNFGPenY = 10+y;
 		CNFGDrawText( stbuf, 2 );
 	}
-	CNFGColor( 0xffffff );
+	CNFGColor( 0xffffffff );
 	CNFGPenX = 10; CNFGPenY = 10;
 	CNFGDrawText( stbuf, 2 );
 }
@@ -325,7 +325,7 @@ void DrawFrameHistogram()
 
 		for( i = 0; i < rslots; i++ )
 		{
-			CNFGColor( 0x33cc33 );
+			CNFGColor( 0x33cc33ff );
 			int top = 30;
 			uint64_t samps = samples[i];
 			int bottom = screeny - 50;
@@ -336,11 +336,11 @@ void DrawFrameHistogram()
 			if( !in_frame_mode )
 			{
 				CNFGTackRectangle( startx, bottom-height, endx, bottom + 1 );
-				CNFGColor( 0x00 );
+				CNFGColor( 0x000000ff );
 			}
 			else
 			{
-				CNFGColor( 0x8080ff );
+				CNFGColor( 0x8080ffff );
 			}
 			CNFGTackSegment( startx, bottom+1, endx, bottom+1 );
 
@@ -359,11 +359,11 @@ void DrawFrameHistogram()
 
 			if( !in_frame_mode )
 			{
-				CNFGColor( 0xffffff );
+				CNFGColor( 0xffffffff );
 			}
 			else
 			{
-				CNFGColor( 0x8080ff );
+				CNFGColor( 0x8080ffff );
 			}
 
 
@@ -422,7 +422,7 @@ void DrawFrame( void )
 
 		if( rt > st ) // ping received
 		{
-			CNFGColor( 0xffffff );
+			CNFGColor( 0xffffffff );
 			dt = rt - st;
 			dt *= 1000;
 			totaltime += dt;
@@ -434,14 +434,14 @@ void DrawFrame( void )
 		}
 		else if (st != 0) // ping sent but not received
 		{
-			CNFGColor( 0xff );
+			CNFGColor( 0xff0000ff );
 			dt = now - st;
 			dt *= 1000;
 			if( i > 5 ) totalcountloss++; //Get a freebie on the first 5.
 		}
 		else // no ping sent for this point in time (after startup)
 		{
-			CNFGColor( 0x0 );
+			CNFGColor( 0x000000ff );
 			dt = 99 * 1000; // assume 99s to fill screen black
 		}
 
@@ -481,7 +481,7 @@ void DrawFrame( void )
 	int avg_gui    = avg*GuiYScaleFactor;
 	int stddev_gui = stddev*GuiYScaleFactor;
 
-	CNFGColor( 0xff00 );
+	CNFGColor( 0x00ff00ff );
 
 
 	int l = avg_gui;
@@ -639,7 +639,7 @@ int main( int argc, const char ** argv )
 	{
 		pattern[i] = rand();
 	}
-	CNFGBGColor = 0x800000;
+	CNFGBGColor = 0x000080ff;
 #ifdef WIN32
 	if( argc < 2 )
 	{
@@ -753,7 +753,7 @@ int main( int argc, const char ** argv )
 		CNFGHandleInput();
 
 		CNFGClearFrame();
-		CNFGColor( 0xFFFFFF );
+		CNFGColor( 0xffffffff );
 		CNFGGetDimensions( &screenx, &screeny );
 
 		if( in_frame_mode )
@@ -767,7 +767,7 @@ int main( int argc, const char ** argv )
 		}
 
 		CNFGPenX = 100; CNFGPenY = 100;
-		CNFGColor( 0xff );
+		CNFGColor( 0xff0000ff );
 		if( ping_failed_to_send )
 		{
 			CNFGDrawText( "Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?", 3 );
