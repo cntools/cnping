@@ -1,0 +1,53 @@
+.TH CNPING 1 "Dec 2020" "version 1.0" "User Manuals"
+.SH "NAME"
+cnping \- Minimal Graphical IPv4 Ping/HTTP Ping Tool
+.SH "SYNOPSIS"
+.B cnping cnping [host] [period] [extra size] [y-axis scaling] [window title]
+.SH "DESCRIPTION"
+.B cnping
+is a minimal graphical real time IPv4 ping tool written in C.
+It can send pings via ICMP (regular ping) or HTTP which is useful 
+in case ICMP is prohibited. Responses are displayed as vertical bars 
+in a graphical window. Red bars indicate a response was not (yet) 
+received, white bars indicate the response was received with a height 
+relative to the round trip time. Additional statistics are displayed 
+as an overlay.
+.SH "OPTIONS"
+All options can be passed either positional or as flags.
+.IP -h
+domain, IP address of ping target for ICMP or http host, i.e. http://google.com
+
+.IP -p
+period in seconds (optional), default 0.02 
+
+.IP -s
+ping packet extra size (above 12), optional, default = 0 
+
+.IP -y
+use a fixed scaling factor instead of auto scaling (optional)
+
+.IP -t
+the title of the window (optional)
+
+.SH "GUI"
+.IP q
+quit
+
+.IP m
+toggle histogram mode
+
+.IP f
+toggle histogram frame mode
+
+.IP c
+reset histogram data
+
+.SH "AUTHOR"
+Charles Lohr <TODO Email>
+.SH COPYRIGHT
+Copyright \(co 2018-2020 Charles Lohr
+.br
+.SH LICENSE
+Rawdraw and CNPing may be licensed feely under the MIT-x11
+or NewBSD Licenses. You choose!
+
