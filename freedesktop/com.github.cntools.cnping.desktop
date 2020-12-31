@@ -3,11 +3,12 @@ Version=1.0
 Name=cnping
 Comment=Minimal Graphical IPv4 Ping/HTTP Ping Tool
 Type=Application
-# It is currently nonsense to call the executable without arguments.
-# Exec=cnping
-# Terminal=true # Reconsider once Exec is set
 Icon=com.github.cntools.cnping
 Categories=Network;
 Keywords=ping;
 StartupWMClass=cnping
+
+# cnping is meant to be started from command line, let's give users a hint.
+Exec=bash -c "cnping ; bash"
+Terminal=true
 
