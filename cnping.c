@@ -729,9 +729,11 @@ int main( int argc, const char ** argv )
 		ERRM( "Fault in WSAStartup\n" );
 		exit( -2 );
 	}
+	CNFGSetup( title, 320, 155 );
+#else
+	CNFGSetupWMClass( title, 320, 155, "cnping", "cnping" );
 #endif
  
-	CNFGSetup( title, 320, 155 );
 
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
