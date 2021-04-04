@@ -36,6 +36,26 @@
 #include "error_handling.h"
 #include "httping.h"
 
+// #### Cross-plattform debugging ####
+// Windows does not print to Console, use DebugView from SysInternals to
+// see the output. (Setup: Computer -> Connect Local; Capture -> Capture Win32)
+// Warning: Debugging on Windows can slow cnping down and lead to wrong measurements!
+//#define DEBUG
+#ifdef DEBUG
+	char msgbuf[1024];
+	#ifdef WIN32
+		#define debug(...) \
+			snprintf(msgbuf, sizeof(msgbuf), __VA_ARGS__); \
+			OutputDebugString(msgbuf);
+	#else
+		#define debug(...) printf(__VA_ARGS__);
+	#endif
+#else
+	// Let the compiler parse it to catch errors. Compiler will optimize away.
+	#define debug(...) \
+			do { if (0) fprintf(stderr, __VA_ARGS__); } while (0);
+#endif
+
 unsigned frames = 0;
 unsigned long iframeno = 0;
 short screenx, screeny;
@@ -46,7 +66,8 @@ double globmaxtime, globmintime = 1e20;
 double globinterval, globlast;
 uint64_t globalrx;
 uint64_t globallost;
-uint8_t pattern[8];
+// Ping Data. Will be overwritten with random bytes when !DEBUG
+uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
@@ -135,8 +156,11 @@ void HTTPingCallbackGot( int seqno )
 void display(uint8_t *buf, int bytes)
 {
 	int reqid = (buf[0] << 24) | (buf[1]<<16) | (buf[2]<<8) | (buf[3]);
+	debug("Received ping: reqid=%d\n", reqid);
 	reqid &= (PINGCYCLEWIDTH-1);
-	if( memcmp( buf+4, pattern, 8 ) != 0 ) return;
+	if( memcmp( buf+4, pattern, sizeof(pattern) ) != 0 ) return;
+	debug("Memcmp OK, checked %ld bytes, first values being %x %x %x %x\n",
+		  (long int) sizeof(pattern), pattern[0], pattern[1], pattern[2], pattern[3])
 	HandleGotPacket( reqid, 0 );
 }
 
@@ -147,7 +171,7 @@ int load_ping_packet( uint8_t * buffer, int bufflen )
 	buffer[2] = current_cycle >> 8;
 	buffer[3] = current_cycle >> 0;
 
-	memcpy( buffer+4, pattern, 8 );
+	memcpy( buffer+4, pattern, sizeof(pattern) );
 
 	if( ping_failed_to_send )
 	{
@@ -518,9 +542,9 @@ int glargc = 0;
 
 int RegString( int write, char * data, DWORD len )
 {
-    HKEY hKey;
-	if( RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\cnping", 0, NULL,       
-        REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, NULL) == ERROR_SUCCESS)
+	HKEY hKey;
+	if( RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\cnping", 0, NULL,	   
+		REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &hKey, NULL) == ERROR_SUCCESS)
 	{
 		if( write )
 		{
@@ -634,11 +658,12 @@ int main( int argc, const char ** argv )
 #endif
 
 	srand( (uintmax_t)(OGGetAbsoluteTime()*100000) );
-
+	#ifndef DEBUG
 	for( i = 0; i < sizeof( pattern ); i++ )
 	{
 		pattern[i] = rand();
 	}
+	#endif
 	CNFGBGColor = 0x000080ff;
 #ifdef WIN32
 	if( argc < 2 )
@@ -653,7 +678,7 @@ int main( int argc, const char ** argv )
 	ExtraPingSize = 0;
 	title[0] = 0;
 	GuiYScaleFactor = 0;
-  
+
 	//We need to process all the unmarked parameters.
 	int argcunmarked = 1;
 	int displayhelp = 0;
