@@ -109,7 +109,7 @@ static void * pingerthread( void * v )
 		}
 		if( res )
 		{
-			display( ping_payload, rl );
+			display( repl.rply.Data, rl );
 		}
 		OGUnlockSema( s_disp );
 	}
@@ -144,7 +144,7 @@ void ping(struct sockaddr_in *addr )
 
 
 
-#else
+#else // ! WIN_USE_NO_ADMIN_PING
 
 //The normal way to do it - only problem is Windows needs admin privs.
 
@@ -408,7 +408,7 @@ void ping_setup()
 
 }
 
-#endif
+#endif // WIN_USE_NO_ADMIN_PING
 
 
 
