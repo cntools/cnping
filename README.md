@@ -41,6 +41,16 @@ Note that if only http pinging is requested, you do not need cap_net_raw or root
 
  [cnping-git](https://aur.archlinux.org/packages/cnping-git/) in the [Arch User Repository](https://wiki.archlinux.org/index.php/Arch_User_Repository)
 
+### Gentoo
+
+ [jjakob's Gentoo overlay](https://github.com/jjakob/gentoo-overlay)
+
+```
+eselect repository enable jjakob
+echo "net-analyzer/cnping::jjakob **" > /etc/portage/package.accept_keywords/cnping
+emerge --sync
+emerge -a net-analyzer/cnping
+```
 
 ### Windows
 
