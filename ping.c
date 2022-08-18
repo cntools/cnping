@@ -8,7 +8,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/socket.h>
 #include "ping.h"
 #include "error_handling.h"
 
@@ -164,7 +163,7 @@ void ping(struct sockaddr_in *addr )
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <stdint.h>
-#else
+#else // ! WIN32
 	#ifdef __FreeBSD__
 		#include <netinet/in.h>
 	#endif
