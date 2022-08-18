@@ -652,6 +652,7 @@ int main( int argc, const char ** argv )
 	double LastFrameTime = OGGetAbsoluteTime();
 	double SecToWait;
 	double frameperiodseconds;
+	const char * device = NULL;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -704,6 +705,7 @@ int main( int argc, const char ** argv )
 				case 'y': GuiYScaleFactor = atof( nextargv ); break;
 				case 't': sprintf(title, "%s", nextargv); break;
 				case 'm': in_histogram_mode = 1; break;
+				case 'I': device = nextargv; break;
 				default: displayhelp = 1; break;
 			}
 		}
@@ -744,7 +746,8 @@ int main( int argc, const char ** argv )
 			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
-			"   (-t) [window title]         -- the title of the window (optional)\n");
+			"   (-t) [window title]         -- the title of the window (optional)\n"
+			"   (-I) [interface]            -- Sets source interface (i.e. eth0)\n");
 		return -1;
 	}
 
@@ -766,7 +769,7 @@ int main( int argc, const char ** argv )
 	}
 	else
 	{
-		ping_setup();
+		ping_setup(device);
 		OGCreateThread( PingSend, 0 );
 		OGCreateThread( PingListen, 0 );
 	}
