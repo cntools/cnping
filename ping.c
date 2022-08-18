@@ -47,8 +47,9 @@ struct sockaddr_in psaddr;
 static og_sema_t s_disp;
 static og_sema_t s_ping;
 
-void ping_setup()
+void ping_setup(const char * device)
 {
+
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
 	//This function is executed first.

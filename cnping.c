@@ -752,6 +752,12 @@ int main( int argc, const char ** argv )
 	}
 
 #if defined( WIN32 ) || defined( WINDOWS )
+	if(device)
+	{
+		ERRM("Error: Device option is not implemented on your platform. PRs welcome.\n");
+		exit( -1 );
+	}
+	
 	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
 	{
 		ERRM( "Fault in WSAStartup\n" );
