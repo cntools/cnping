@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include "ping.h"
 #include "error_handling.h"
 
@@ -364,7 +365,7 @@ void ping(struct sockaddr_in *addr )
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
-void ping_setup()
+void ping_setup(const char * device)
 {
 	pid = getpid();
 
@@ -397,6 +398,15 @@ void ping_setup()
 	{
 		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
 		exit( -1 );
+	}
+
+	if(device)
+	{
+		if( setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
+		{
+			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
+			exit( -1 );
+		}
 	}
 
 #endif
