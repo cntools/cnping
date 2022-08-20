@@ -102,7 +102,7 @@ reconnect:
 	{
 		if( setsockopt(httpsock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
 		{
-			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
+			ERRM("Error: Failed to set Device option.\n");
 			exit( -1 );
 		}
 	}
