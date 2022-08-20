@@ -36,9 +36,11 @@ void HTTPingCallbackStart( int seqno );
 void HTTPingCallbackGot( int seqno );
 
 //Don't dynamically allocate resources here, since execution may be stopped arbitrarily.
-void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile double * timeouttime, int * socketptr, volatile int * getting_host_by_name )
+void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile double * timeouttime, int * socketptr, volatile int * getting_host_by_name, const char * device)
 {
 #if defined(WIN32) || defined(WINDOWS)
+	(void) device; // option is not available for windows. Suppress unused warning.
+
 	WSADATA wsaData;
 	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
 	if( r )
@@ -95,8 +97,19 @@ reconnect:
 		return;
 	}
 
+#if !defined( WIN32 ) && !defined( WINDOWS )
+	if(device)
+	{
+		if( setsockopt(httpsock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
+		{
+			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
+			exit( -1 );
+		}
+	}
+#endif
+
 	/* connect: create a connection with the server */
-	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0) 
+	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0)
 	{
 		ERRMB( "%s: ERROR connecting\n", hostname );
 		goto fail;
@@ -172,6 +185,7 @@ struct HTTPPingLaunch
 {
 	const char * addy;
 	double minperiod;
+	const char * device;
 
 	volatile double timeout_time;
 	volatile int failed;
@@ -185,7 +199,7 @@ static void * DeployPing( void * v )
 	struct HTTPPingLaunch *hpl = (struct HTTPPingLaunch*)v;
 	hpl->socket = 0;
 	hpl->getting_host_by_name = 0;
-	DoHTTPing( hpl->addy, hpl->minperiod, &hpl->seqno, &hpl->timeout_time, &hpl->socket, &hpl->getting_host_by_name );
+	DoHTTPing( hpl->addy, hpl->minperiod, &hpl->seqno, &hpl->timeout_time, &hpl->socket, &hpl->getting_host_by_name, hpl->device );
 	hpl->failed = 1;
 	return 0;
 }
@@ -225,11 +239,12 @@ static void * PingRunner( void * v )
 	return 0;
 }
 
-int StartHTTPing( const char * addy, double minperiod )
+int StartHTTPing( const char * addy, double minperiod, const char * device)
 {
 	struct HTTPPingLaunch *hpl = malloc( sizeof( struct HTTPPingLaunch ) );
 	hpl->addy = addy;
 	hpl->minperiod = minperiod;
+	hpl->device = device;
 	OGCreateThread( PingRunner, hpl );
 	return 0;
 }

@@ -771,7 +771,7 @@ int main( int argc, const char ** argv )
 
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
-		StartHTTPing( pinghost+7, pingperiodseconds );
+		StartHTTPing( pinghost+7, pingperiodseconds, device );
 	}
 	else
 	{
