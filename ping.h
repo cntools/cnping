@@ -22,7 +22,7 @@ void do_pinger( const char * strhost );
 extern float pingperiodseconds;
 extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only approximate, if 1, spinlock until precise time for ping is hit.
 extern int ping_failed_to_send;
-void ping_setup();
+void ping_setup(const char * device);
 
 
 #endif

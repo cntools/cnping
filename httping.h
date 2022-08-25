@@ -6,7 +6,7 @@ void HTTPingCallbackStart( int seqno );
 void HTTPingCallbackGot( int seqno );
 
 //addy should be google.com/blah or something like that.  Do not include prefixing http://.  Port numbers OK.
-int StartHTTPing( const char * addy, double minperiod );
+int StartHTTPing( const char * addy, double minperiod, const char * device);
 
 #endif
 

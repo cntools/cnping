@@ -652,6 +652,7 @@ int main( int argc, const char ** argv )
 	double LastFrameTime = OGGetAbsoluteTime();
 	double SecToWait;
 	double frameperiodseconds;
+	const char * device = NULL;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -704,6 +705,7 @@ int main( int argc, const char ** argv )
 				case 'y': GuiYScaleFactor = atof( nextargv ); break;
 				case 't': sprintf(title, "%s", nextargv); break;
 				case 'm': in_histogram_mode = 1; break;
+				case 'I': device = nextargv; break;
 				default: displayhelp = 1; break;
 			}
 		}
@@ -744,11 +746,18 @@ int main( int argc, const char ** argv )
 			"   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			"   (-s) [extra size]           -- ping packet extra size (above 12), optional, default = 0 \n"
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
-			"   (-t) [window title]         -- the title of the window (optional)\n");
+			"   (-t) [window title]         -- the title of the window (optional)\n"
+			"   (-I) [interface]            -- Sets source interface (i.e. eth0)\n");
 		return -1;
 	}
 
 #if defined( WIN32 ) || defined( WINDOWS )
+	if(device)
+	{
+		ERRM("Error: Device option is not implemented on your platform. PRs welcome.\n");
+		exit( -1 );
+	}
+	
 	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
 	{
 		ERRM( "Fault in WSAStartup\n" );
@@ -762,11 +771,11 @@ int main( int argc, const char ** argv )
 
 	if( memcmp( pinghost, "http://", 7 ) == 0 )
 	{
-		StartHTTPing( pinghost+7, pingperiodseconds );
+		StartHTTPing( pinghost+7, pingperiodseconds, device );
 	}
 	else
 	{
-		ping_setup();
+		ping_setup(device);
 		OGCreateThread( PingSend, 0 );
 		OGCreateThread( PingListen, 0 );
 	}

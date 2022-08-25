@@ -47,8 +47,9 @@ struct sockaddr_in psaddr;
 static og_sema_t s_disp;
 static og_sema_t s_ping;
 
-void ping_setup()
+void ping_setup(const char * device)
 {
+
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
 	//This function is executed first.
@@ -163,7 +164,7 @@ void ping(struct sockaddr_in *addr )
 	#include <winsock2.h>
 	#include <ws2tcpip.h>
 	#include <stdint.h>
-#else
+#else // ! WIN32
 	#ifdef __FreeBSD__
 		#include <netinet/in.h>
 	#endif
@@ -364,7 +365,7 @@ void ping(struct sockaddr_in *addr )
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
-void ping_setup()
+void ping_setup(const char * device)
 {
 	pid = getpid();
 
@@ -397,6 +398,15 @@ void ping_setup()
 	{
 		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
 		exit( -1 );
+	}
+
+	if(device)
+	{
+		if( setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
+		{
+			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
+			exit( -1 );
+		}
 	}
 
 #endif
