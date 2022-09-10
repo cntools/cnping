@@ -194,7 +194,7 @@ void * PingListen( void * r )
 
 void * PingSend( void * r )
 {
-	do_pinger( pinghost );
+	do_pinger( );
 	ERRM( "Fault on ping.\n" );
 	exit( -1 );
 }
@@ -775,7 +775,7 @@ int main( int argc, const char ** argv )
 	}
 	else
 	{
-		ping_setup(device);
+		ping_setup( pinghost, device );
 		OGCreateThread( PingSend, 0 );
 		OGCreateThread( PingListen, 0 );
 	}

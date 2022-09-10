@@ -2,6 +2,7 @@
 #define _PING_H
 
 #include <stdint.h>
+#include <sys/socket.h> // for socklen_t
 
 struct sockaddr_in;
 
@@ -15,14 +16,14 @@ void display(uint8_t *buf, int bytes);
 int load_ping_packet( uint8_t  * buffer, int buffersize );
 
 void listener();
-void ping(struct sockaddr_in *addr );
-void do_pinger( const char * strhost );
+void ping(struct sockaddr *addr, socklen_t addr_len );
+void do_pinger( );
 
 //If pingperiodseconds = -1, run ping/do_pinger once and exit.
 extern float pingperiodseconds;
 extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only approximate, if 1, spinlock until precise time for ping is hit.
 extern int ping_failed_to_send;
-void ping_setup(const char * device);
+void ping_setup(const char * strhost, const char * device);
 
 
 #endif
