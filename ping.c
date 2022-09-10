@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "ping.h"
 #include "error_handling.h"
 
@@ -18,7 +19,9 @@
 int ping_failed_to_send;
 float pingperiodseconds;
 int precise_ping;
-struct sockaddr_in psaddr;
+struct sockaddr_in6 psaddr;
+socklen_t psaddr_len;
+int af_family;
 
 #ifdef WIN_USE_NO_ADMIN_PING
 
@@ -179,6 +182,8 @@ void ping(struct sockaddr_in *addr )
 	#endif
 	#include <netinet/ip.h>
 	#include <netinet/ip_icmp.h>
+	#include <netinet/icmp6.h>
+	#include <arpa/inet.h> // inet_pton (parsing ipv4 and ipv6 notation)
 #endif
 
 #include "rawdraw/os_generic.h"
@@ -238,21 +243,116 @@ uint16_t checksum( const unsigned char * start, uint16_t len )
 	return ~csum;
 }
 
+// setsockopt TTL to 255
+void setTTL(int sock)
+{
+	const int val=255;
+
+	assert(af_family == AF_INET || af_family == AF_INET6);
+
+	if ( setsockopt(sd, (af_family == AF_INET) ? SOL_IP : SOL_IPV6, IP_TTL, &val, sizeof(val)) != 0)
+	{
+		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
+		exit( -1 );
+	}
+}
+
+// 0 = failed, 1 = this is a ICMP Response
+int isICMPResponse(unsigned char* buf, int bytes)
+{
+	assert(af_family == AF_INET || af_family == AF_INET6);
+
+	if( bytes == -1 ) return 0;
+
+	if( af_family == AF_INET ) // ipv4 compare
+	{
+		if( buf[9] != IPPROTO_ICMP ) return 0;
+		if( buf[20] !=  ICMP_ECHOREPLY ) return 0;
+
+	}
+	else if( af_family == AF_INET6 ) // ipv6 compare
+	{
+		if( buf[0] != ICMP6_ECHO_REPLY ) {
+			printf("buf[0] failed\n");
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+int createSocket()
+{
+	if( af_family == AF_INET )
+	{
+		return socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+	}
+	else if( af_family == AF_INET6 )
+	{
+		return socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+	}
+
+	// invalid af_family
+	return -1;
+}
+
+// try to parse hostname
+//  * as dot notation (1.1.1.1)
+//  * as ipv6 notation (abcd:ef00::1)
+//  * as hostname (resolve DNS)
+static int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname)
+{
+	// try to parse ipv4
+	int parseresult = inet_pton(AF_INET, hostname, &((struct sockaddr_in*) addr)->sin_addr);
+	if(parseresult == 1)
+	{
+		struct sockaddr_in* ipv4addr = ((struct sockaddr_in*) addr);
+		ipv4addr->sin_family = AF_INET;
+		*addr_len = sizeof(struct sockaddr_in);
+		return 1;
+	}
+
+	// try to parse ipv6
+	parseresult = inet_pton(AF_INET6, hostname, &((struct sockaddr_in6*) addr)->sin6_addr);
+	if(parseresult == 1)
+	{
+		struct sockaddr_in6* ipv6addr = ((struct sockaddr_in6*) addr);
+		ipv6addr->sin6_family = AF_INET6;
+		*addr_len = sizeof(struct sockaddr_in6);
+		return 1;
+	}
+
+	// try to resolve DNS
+	struct addrinfo* res = NULL;
+	int errorcode = getaddrinfo(hostname, NULL, NULL, &res);
+
+	if( errorcode != 0)
+	{
+		ERRM("Error: cannot resolve hostname %s: %s\n", hostname, gai_strerror(errorcode));
+		exit( -1 );
+	}
+
+	if(res->ai_addrlen > *addr_len)
+	{
+		// error
+		exit( -1 );
+	}
+	memcpy(addr, res->ai_addr, res->ai_addrlen);
+	*addr_len = res->ai_addrlen;
+
+	freeaddrinfo(res);
+	return 1;
+}
+
 void listener()
 {
 #ifndef WIN32
-	const int val=255;
+	int sd = createSocket();
 
-	int sd = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
-
-	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
-	{
-		ERRM("Error: could not set TTL option  - did you forget to run as root or sticky bit cnping?\n");
-			exit( -1 );
-	}
+	setTTL(sd);
 #endif
 
-	struct sockaddr_in addr;
+	struct sockaddr_in6 addr;
 	unsigned char buf[66000];
 #ifdef WIN32
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
@@ -271,21 +371,30 @@ void listener()
 		keep_retry_quick:
 
 		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlenval );
-		if( bytes == -1 ) continue;
-		if( buf[20] != 0 ) continue; //Make sure ping response.
-		if( buf[9] != 1 ) continue; //ICMP
-		if( addr.sin_addr.s_addr != psaddr.sin_addr.s_addr ) continue;
+		if( !isICMPResponse(buf, bytes) ) continue;
+
+		// compare the sender
+		if( memcmp(&addr, &psaddr, addrlenval) != 0 ) continue;
 
 		// sizeof(packet.hdr) + 20
+		int offset = 0;
+		if(af_family == AF_INET) // ipv4
+		{
 #ifdef __FreeBSD__
-		int offset = 48;
+			offset = 48;
 #else
-		int offset = 28;
+			offset = 28;
 #endif
+		}
+		else // ipv6
+		{
+			offset = 8;
+		}
+
 		if ( bytes > 0 )
 			display(buf + offset, bytes - offset );
 		else
-    {
+		{
 			ERRM("Error: recvfrom failed");
 		}
 
@@ -296,7 +405,7 @@ void listener()
 	exit( 0 );
 }
 
-void ping(struct sockaddr_in *addr )
+void ping(struct sockaddr *addr, socklen_t addr_len )
 {
 	int cnt=1;
 
@@ -326,17 +435,18 @@ void ping(struct sockaddr_in *addr )
 		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
 #else
 		pckt.hdr.code = 0;
-		pckt.hdr.type = ICMP_ECHO;
+		pckt.hdr.type = (af_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
 		pckt.hdr.un.echo.id = pid;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
 #endif
 
-		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (struct sockaddr*)addr, sizeof(*addr));
+		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, addr, addr_len);
 
 		if( sr <= 0 )
 		{
 			ping_failed_to_send = 1;
+			ERRM("Ping send failed: %s familiy: %d\n", strerror(errno), addr->sa_family);
 		}
 		else
 		{
@@ -365,7 +475,7 @@ void ping(struct sockaddr_in *addr )
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
 }
 
-void ping_setup(const char * device)
+void ping_setup(const char * strhost, const char * device)
 {
 	pid = getpid();
 
@@ -390,15 +500,15 @@ void ping_setup(const char * device)
 		}
 	}
 #else
-	const int val=255;
+	// resolve host
+	memset(&psaddr, 0, sizeof(psaddr));
+	psaddr_len = sizeof(struct sockaddr_in6);
+	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
+	af_family = psaddr.sin6_family;
 
-	sd = socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
+	sd = createSocket();
 
-	if ( setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
-	{
-		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
-		exit( -1 );
-	}
+	setTTL(sd);
 
 	if(device)
 	{
@@ -421,22 +531,9 @@ void ping_setup(const char * device)
 #endif // WIN_USE_NO_ADMIN_PING
 
 
-
-void do_pinger( const char * strhost )
+void do_pinger( )
 {
-	struct hostent *hname;
-	hname = gethostbyname(strhost);
-	if( hname == 0 )
-	{
-		ERRM( "Error: cannot find host %s\n", strhost );
-		return;
-	}
-
-	memset(&psaddr, 0, sizeof(psaddr));
-	psaddr.sin_family = hname->h_addrtype;
-	psaddr.sin_port = 0;
-	psaddr.sin_addr.s_addr = *(long*)hname->h_addr;
-	ping(&psaddr );
+	ping((struct sockaddr*) &psaddr, psaddr_len );
 }
 
 
