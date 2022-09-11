@@ -2,7 +2,11 @@
 #define _PING_H
 
 #include <stdint.h>
-#include <sys/socket.h> // for socklen_t
+#ifdef WIN32
+	typedef int socklen_t;
+#else
+	#include <sys/socket.h>
+#endif
 
 struct sockaddr_in;
 

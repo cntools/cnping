@@ -1,8 +1,10 @@
 #include "httping.h"
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "resolve.h"
 
 #ifndef TCC
 #include <unistd.h>
@@ -49,8 +51,9 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 		exit( -2 );
 	}
 #endif
-	struct sockaddr_in serveraddr;
-	struct hostent *server;
+	struct sockaddr_in6 serveraddr;
+	socklen_t serveraddr_len;
+	int serverresolve;
 	int httpsock;
 	int addylen = strlen(addy);
 	char hostname[addylen+1];
@@ -75,22 +78,21 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	}
 
 	/* gethostbyname: get the server's DNS entry */
+	serveraddr_len = sizeof(serveraddr);
 	*getting_host_by_name = 1;
-	server = gethostbyname(hostname);
+	serverresolve = resolveName((struct sockaddr*) &serveraddr, &serveraddr_len, hostname);
 	*getting_host_by_name = 0;
-	if (server == NULL) {
+
+	if (serverresolve != 1) {
 		ERRMB("ERROR, no such host as \"%s\"\n", hostname);
 		goto fail;
 	}
 
 	/* build the server's Internet address */
-	memset((char *) &serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	memcpy((char *)&serveraddr.sin_addr.s_addr, (char *)server->h_addr, server->h_length);
-	serveraddr.sin_port = htons(portno);
-	
+	serveraddr.sin6_port = htons(portno);
+
 reconnect:
-	*socketptr = httpsock = socket(AF_INET, SOCK_STREAM, 0);
+	*socketptr = httpsock = socket(serveraddr.sin6_family, SOCK_STREAM, 0);
 	if (httpsock < 0)
 	{
 		ERRMB( "Error opening socket\n" );
@@ -109,9 +111,9 @@ reconnect:
 #endif
 
 	/* connect: create a connection with the server */
-	if (connect(httpsock, (struct sockaddr*)&serveraddr, sizeof(serveraddr)) < 0)
+	if (connect(httpsock, (struct sockaddr*)&serveraddr, serveraddr_len) < 0)
 	{
-		ERRMB( "%s: ERROR connecting\n", hostname );
+		ERRMB( "%s: ERROR connecting: %s (%d)\n", hostname, strerror(errno), errno );
 		goto fail;
 	}
 

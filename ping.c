@@ -11,6 +11,7 @@
 #include <assert.h>
 #include "ping.h"
 #include "error_handling.h"
+#include "resolve.h"
 
 #ifdef TCC
 #include "tccheader.h"
@@ -182,7 +183,6 @@ void ping(struct sockaddr_in *addr )
 	#include <netinet/ip.h>
 	#include <netinet/ip_icmp.h>
 	#include <netinet/icmp6.h>
-	#include <arpa/inet.h> // inet_pton (parsing ipv4 and ipv6 notation)
 #endif
 
 #include "rawdraw/os_generic.h"
@@ -295,54 +295,6 @@ int createSocket()
 	return -1;
 }
 
-// try to parse hostname
-//  * as dot notation (1.1.1.1)
-//  * as ipv6 notation (abcd:ef00::1)
-//  * as hostname (resolve DNS)
-static int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname)
-{
-	// try to parse ipv4
-	int parseresult = inet_pton(AF_INET, hostname, &((struct sockaddr_in*) addr)->sin_addr);
-	if(parseresult == 1)
-	{
-		struct sockaddr_in* ipv4addr = ((struct sockaddr_in*) addr);
-		ipv4addr->sin_family = AF_INET;
-		*addr_len = sizeof(struct sockaddr_in);
-		return 1;
-	}
-
-	// try to parse ipv6
-	parseresult = inet_pton(AF_INET6, hostname, &((struct sockaddr_in6*) addr)->sin6_addr);
-	if(parseresult == 1)
-	{
-		struct sockaddr_in6* ipv6addr = ((struct sockaddr_in6*) addr);
-		ipv6addr->sin6_family = AF_INET6;
-		*addr_len = sizeof(struct sockaddr_in6);
-		return 1;
-	}
-
-	// try to resolve DNS
-	struct addrinfo* res = NULL;
-	int errorcode = getaddrinfo(hostname, NULL, NULL, &res);
-
-	if( errorcode != 0)
-	{
-		ERRM("Error: cannot resolve hostname %s: %s\n", hostname, gai_strerror(errorcode));
-		exit( -1 );
-	}
-
-	if(res->ai_addrlen > *addr_len)
-	{
-		// error
-		exit( -1 );
-	}
-	memcpy(addr, res->ai_addr, res->ai_addrlen);
-	*addr_len = res->ai_addrlen;
-
-	freeaddrinfo(res);
-	return 1;
-}
-
 void listener()
 {
 #ifndef WIN32
@@ -445,7 +397,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 		if( sr <= 0 )
 		{
 			ping_failed_to_send = 1;
-			ERRM("Ping send failed: %s familiy: %d\n", strerror(errno), addr->sa_family);
+			ERRM("Ping send failed: %s errno: %d\n", strerror(errno), errno);
 		}
 		else
 		{
@@ -500,8 +452,7 @@ void ping_setup(const char * strhost, const char * device)
 	}
 #else
 	// resolve host
-	memset(&psaddr, 0, sizeof(psaddr));
-	psaddr_len = sizeof(struct sockaddr_in6);
+	psaddr_len = sizeof(psaddr);
 	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
 
 	sd = createSocket();
@@ -534,6 +485,6 @@ void do_pinger( )
 	ping((struct sockaddr*) &psaddr, psaddr_len );
 }
 
-
+// used by the ERRMB makro from error_handling.h
 char errbuffer[1024];
 
