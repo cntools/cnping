@@ -50,8 +50,11 @@ socklen_t psaddr_len;
 static og_sema_t s_disp;
 static og_sema_t s_ping;
 
-void ping_setup(const char * device)
+void ping_setup(const char * strhost, const char * device)
 {
+	// resolve host
+	psaddr_len = sizeof(psaddr);
+	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
 
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
@@ -93,7 +96,7 @@ static void * pingerthread( void * v )
 		} repl;
 
 		DWORD res = IcmpSendEcho( ih,
-			psaddr.sin_addr.s_addr, ping_payload, rl,
+			((struct sockaddr_in*) &psaddr)->sin_addr.s_addr, ping_payload, rl,
 			0, &repl, sizeof( repl ),
 			timeout_ms );
 		int err;
@@ -120,9 +123,19 @@ static void * pingerthread( void * v )
 	return 0;
 }
 
-void ping(struct sockaddr_in *addr )
+void ping(struct sockaddr *addr, socklen_t addr_len )
 {
 	int i;
+	(void) addr;
+	(void) addr_len;
+
+	if( psaddr.sin6_family != AF_INET )
+	{
+		// ipv6 ICMP Ping is not supported on windows
+		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
+		return;
+	}
+
 	//Launch pinger threads
 	for( i = 0; i < PINGTHREADS; i++ )
 	{
