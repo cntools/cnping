@@ -21,7 +21,6 @@ float pingperiodseconds;
 int precise_ping;
 struct sockaddr_in6 psaddr;
 socklen_t psaddr_len;
-int af_family;
 
 #ifdef WIN_USE_NO_ADMIN_PING
 
@@ -248,9 +247,9 @@ void setTTL(int sock)
 {
 	const int val=255;
 
-	assert(af_family == AF_INET || af_family == AF_INET6);
+	assert(psaddr.sin6_family == AF_INET || psaddr.sin6_family == AF_INET6);
 
-	if ( setsockopt(sd, (af_family == AF_INET) ? SOL_IP : SOL_IPV6, IP_TTL, &val, sizeof(val)) != 0)
+	if ( setsockopt(sd, (psaddr.sin6_family == AF_INET) ? SOL_IP : SOL_IPV6, IP_TTL, &val, sizeof(val)) != 0)
 	{
 		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
 		exit( -1 );
@@ -260,17 +259,17 @@ void setTTL(int sock)
 // 0 = failed, 1 = this is a ICMP Response
 int isICMPResponse(unsigned char* buf, int bytes)
 {
-	assert(af_family == AF_INET || af_family == AF_INET6);
+	assert(psaddr.sin6_family == AF_INET || psaddr.sin6_family == AF_INET6);
 
 	if( bytes == -1 ) return 0;
 
-	if( af_family == AF_INET ) // ipv4 compare
+	if( psaddr.sin6_family == AF_INET ) // ipv4 compare
 	{
 		if( buf[9] != IPPROTO_ICMP ) return 0;
 		if( buf[20] !=  ICMP_ECHOREPLY ) return 0;
 
 	}
-	else if( af_family == AF_INET6 ) // ipv6 compare
+	else if( psaddr.sin6_family == AF_INET6 ) // ipv6 compare
 	{
 		if( buf[0] != ICMP6_ECHO_REPLY ) {
 			printf("buf[0] failed\n");
@@ -283,11 +282,11 @@ int isICMPResponse(unsigned char* buf, int bytes)
 
 int createSocket()
 {
-	if( af_family == AF_INET )
+	if( psaddr.sin6_family == AF_INET )
 	{
 		return socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
 	}
-	else if( af_family == AF_INET6 )
+	else if( psaddr.sin6_family == AF_INET6 )
 	{
 		return socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	}
@@ -378,7 +377,7 @@ void listener()
 
 		// sizeof(packet.hdr) + 20
 		int offset = 0;
-		if(af_family == AF_INET) // ipv4
+		if(addr.sin6_family == AF_INET) // ipv4
 		{
 #ifdef __FreeBSD__
 			offset = 48;
@@ -435,7 +434,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
 #else
 		pckt.hdr.code = 0;
-		pckt.hdr.type = (af_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
+		pckt.hdr.type = (psaddr.sin6_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
 		pckt.hdr.un.echo.id = pid;
 		pckt.hdr.un.echo.sequence = cnt++;
 		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
@@ -504,7 +503,6 @@ void ping_setup(const char * strhost, const char * device)
 	memset(&psaddr, 0, sizeof(psaddr));
 	psaddr_len = sizeof(struct sockaddr_in6);
 	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
-	af_family = psaddr.sin6_family;
 
 	sd = createSocket();
 
