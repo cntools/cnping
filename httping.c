@@ -16,7 +16,7 @@
 #if defined( WIN32 ) || defined( WINDOWS )
 	#ifdef TCC
 	#else
-	#include <winsock2.h>
+	#include <ws2tcpip.h>
 	#endif
 #else
 	#include <sys/socket.h>

@@ -3,6 +3,7 @@
 
 #ifdef WIN32
 	typedef int socklen_t;
+	struct sockaddr;
 #else
 	#include <sys/socket.h>
 #endif

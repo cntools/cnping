@@ -6,7 +6,7 @@
 #include "error_handling.h"
 
 #ifdef WIN32
-
+	#include <ws2tcpip.h>
 #else // !WIN32
 	#include <arpa/inet.h> // inet_pton (parsing ipv4 and ipv6 notation)
 

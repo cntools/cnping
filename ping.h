@@ -4,11 +4,10 @@
 #include <stdint.h>
 #ifdef WIN32
 	typedef int socklen_t;
+	struct sockaddr;
 #else
 	#include <sys/socket.h>
 #endif
-
-struct sockaddr_in;
 
 unsigned short checksum(const unsigned char *b, uint16_t len);
 
