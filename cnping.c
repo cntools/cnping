@@ -804,14 +804,7 @@ int main( int argc, const char ** argv )
 
 		CNFGPenX = 100; CNFGPenY = 100;
 		CNFGColor( 0xff0000ff );
-		if( ping_failed_to_send )
-		{
-			CNFGDrawText( "Could not send ping.\nIs target reachable?\nDo you have sock_raw to privileges?", 3 );
-		}
-		else
-		{
-			CNFGDrawText( errbuffer, 3 );
-		}
+		CNFGDrawText( errbuffer, 3 );
 
 
 		frames++;

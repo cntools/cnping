@@ -284,10 +284,7 @@ int isICMPResponse(unsigned char* buf, int bytes)
 	}
 	else if( psaddr.sin6_family == AF_INET6 ) // ipv6 compare
 	{
-		if( buf[0] != ICMP6_ECHO_REPLY ) {
-			printf("buf[0] failed\n");
-			return 0;
-		}
+		if( buf[0] != ICMP6_ECHO_REPLY ) return 0;
 	}
 
 	return 1;
@@ -410,7 +407,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 		if( sr <= 0 )
 		{
 			ping_failed_to_send = 1;
-			ERRM("Ping send failed: %s errno: %d\n", strerror(errno), errno);
+			ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
 		}
 		else
 		{
