@@ -52,6 +52,7 @@ int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname
 	if(res->ai_addrlen > *addr_len)
 	{
 		// error - this should not happen
+		ERRM( "Error addr is to short. required length: %d, available length: %d", res->ai_addrlen, *addr_len );
 		freeaddrinfo(res);
 		exit( -1 );
 	}
