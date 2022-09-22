@@ -54,7 +54,7 @@ void ping_setup(const char * strhost, const char * device)
 {
 	// resolve host
 	psaddr_len = sizeof(psaddr);
-	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
+	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
 
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
@@ -133,7 +133,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 	{
 		// ipv6 ICMP Ping is not supported on windows
 		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
-		return;
+		exit( -1 );
 	}
 
 	//Launch pinger threads
@@ -463,7 +463,7 @@ void ping_setup(const char * strhost, const char * device)
 #else
 	// resolve host
 	psaddr_len = sizeof(psaddr);
-	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost);
+	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_UNSPEC);
 
 	sd = createSocket();
 

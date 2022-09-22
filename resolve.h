@@ -13,6 +13,7 @@
 //  * as ipv6 notation (abcd:ef00::1)
 //  * as hostname (resolve DNS)
 // returns 1 on success
-int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname);
+// family can be used to force ipv4 or ipv6. Use AF_UNSPEC (allow both), AF_INET or AF_INET6 to force ipv4 or ipv6
+int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname, int family);
 
 #endif
