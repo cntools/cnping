@@ -80,7 +80,7 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 	/* gethostbyname: get the server's DNS entry */
 	serveraddr_len = sizeof(serveraddr);
 	*getting_host_by_name = 1;
-	serverresolve = resolveName((struct sockaddr*) &serveraddr, &serveraddr_len, hostname);
+	serverresolve = resolveName((struct sockaddr*) &serveraddr, &serveraddr_len, hostname, AF_UNSPEC);
 	*getting_host_by_name = 0;
 
 	if (serverresolve != 1) {
