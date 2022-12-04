@@ -2,6 +2,9 @@ CFLAGS?=-s -Os -I/opt/X11/include -Wall
 LDFLAGS?=-s -L/opt/X11/lib/
 CC?=gcc
 
+ICONSPATH=freedesktop/icons/hicolor/
+APPNAME=com.github.cntools.cnping
+
 all : cnping
 
 #CFLAGS:=$(CFLAGS) -DCNFGOGL
@@ -47,7 +50,19 @@ searchnet : ping.o searchnet.o
 linuxinstall : cnping
 	sudo rm -f /usr/local/bin/cnping
 	sudo cp cnping /usr/local/bin/
+	sudo cp -r $(ICONSPATH) /usr/local/share/icons
+	sudo cp freedesktop/${APPNAME}.desktop /usr/local/share/applications
+	sudo cp freedesktop/${APPNAME}.metainfo.xml /usr/local/share/metainfo
 	sudo setcap cap_net_raw+ep /usr/local/bin/cnping
 #	sudo chmod +t /usr/local/bin/cnping  #One option - set the stuid bit.
 #	sudo install cnping /usr/local/bin/  #Another option - using install.
+
+
+# this target requires imagemagick
+updateicons : ${ICONSPATH}scalable/apps/${APPNAME}.svg
+	convert $^ -resize 16x16 ${ICONSPATH}16x16/apps/${APPNAME}.png
+	convert $^ -resize 32x32 ${ICONSPATH}32x32/apps/${APPNAME}.png
+	convert $^ -resize 48x48 ${ICONSPATH}48x48/apps/${APPNAME}.png
+	convert $^ -resize 256x256 ${ICONSPATH}256x256/apps/${APPNAME}.png
+	convert $^ -resize 1024x1024 ${ICONSPATH}1024x1024/apps/${APPNAME}.png
 
