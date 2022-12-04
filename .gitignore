@@ -4,3 +4,9 @@ cnping
 cnping-mousey
 searchnet
 tags
+
+debian/.debhelper
+debian/cnping
+debian/cnping.substvars
+debian/debhelper-build-stamp
+debian/files

@@ -48,12 +48,12 @@ searchnet : ping.o searchnet.o
 	$(CC) $(CFLAGS) -o $@ $^ -lpthread
 
 linuxinstall : cnping
-	sudo rm -f /usr/local/bin/cnping
-	sudo cp cnping /usr/local/bin/
-	sudo cp -r $(ICONSPATH) /usr/local/share/icons
-	sudo cp freedesktop/${APPNAME}.desktop /usr/local/share/applications
-	sudo cp freedesktop/${APPNAME}.metainfo.xml /usr/local/share/metainfo
-	sudo setcap cap_net_raw+ep /usr/local/bin/cnping
+	rm -f /usr/local/bin/cnping
+	cp cnping /usr/local/bin/
+	cp -r $(ICONSPATH) /usr/local/share/icons
+	cp freedesktop/${APPNAME}.desktop /usr/local/share/applications
+	cp freedesktop/${APPNAME}.metainfo.xml /usr/local/share/metainfo
+	setcap cap_net_raw+ep /usr/local/bin/cnping
 #	sudo chmod +t /usr/local/bin/cnping  #One option - set the stuid bit.
 #	sudo install cnping /usr/local/bin/  #Another option - using install.
 

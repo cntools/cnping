@@ -1,0 +1,4 @@
+cnping /usr/bin/
+freedesktop/com.github.cntools.cnping.desktop /usr/share/applications/
+freedesktop/com.github.cntools.cnping.metainfo.xml /usr/share/metainfo/
+freedesktop/icons/hicolor /usr/share/icons
