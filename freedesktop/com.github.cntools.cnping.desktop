@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Name=cnping
-Comment=Minimal Graphical IPv4 Ping/HTTP Ping Tool
+Comment=Minimal Graphical IP Ping/HTTP Ping Tool
 Type=Application
 Icon=com.github.cntools.cnping
 Categories=Network;

@@ -1,0 +1,27 @@
+Source: cnping
+Section: net
+Priority: optional
+Maintainer: Charles Lohr <lohr85@gmail.com>
+Build-Depends: debhelper-compat (= 12),
+               libglvnd-dev,
+               libx11-dev,
+               libxext-dev,
+               libxinerama-dev,
+               mesa-common-dev
+Standards-Version: 4.6.1
+Homepage: https://github.com/cntools/cnping/
+VCS-Browser: https://github.com/cntools/cnping/
+VCS-Git: https://github.com/cntools/cnping.git
+
+Package: cnping
+Architecture: any
+Depends: libcap2-bin, ${misc:Depends}, ${shlibs:Depends}
+Description: Minimal Graphical IP Ping Tool
+ cnping is a minimal graphical real time IP ping tool written in C.
+ It can send pings via ICMP (regular ping) or HTTP which is useful in case ICMP
+ is prohibited. Responses are displayed as vertical bars in a graphical window.
+ Red bars indicate a response was not (yet) received, white bars indicate the
+ response was received with a height relative to the round trip time.
+ Additional statistics are displayed as an overlay.
+ .
+ cnping uses rawdraw so it is OS independent and very light weight.
