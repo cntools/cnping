@@ -1,0 +1,54 @@
+name: Build cnping
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  Build-for-Linux:
+    runs-on: ubuntu-latest
+      
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y \
+           debhelper-compat \
+           libglvnd-dev \
+           libx11-dev \
+           libxext-dev \
+           libxinerama-dev \
+           mesa-common-dev
+           # Would be nice if we could pull those directly from debian/control
+           # Do we need to version-lock debhelper-compat?
+    - name: Install more dependencies
+      run: |
+        sudo apt-get install -y \
+          make \
+          build-essential \
+          binutils-mingw-w64-i686 \
+          gcc-mingw-w64-i686 \
+          g++-mingw-w64-i686
+
+    - name: Build
+      run: make cnping cnping.exe
+        
+    - uses: actions/upload-artifact@v3
+      with:
+        name: cnping-exe
+        path: "*.exe"
+#    - name: Validate AppStream data
+#      run: appstreamcli validate /usr/share/metainfo/ ... .metainfo.xml
+#    - name: Validate desktop file
+#      run: desktop-file-validate /usr/share/applications/ ... .desktop
+
+#  Build-RPM-for-Fedora:
+#    runs-on: ubuntu-latest
+#    container: dreua/ ...
+#    steps:
+#    - name: RPM Build
+#      run: /cnping/cnping-build
+#    - uses: actions/upload-artifact@v3
+#      with:
+#        name: cnping-fedora-rpm
+#        path: /github/home/rpmbuild/**/*.rpm
