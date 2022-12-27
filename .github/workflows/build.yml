@@ -48,8 +48,8 @@ jobs:
       
     - uses: actions/upload-artifact@v3
       with:
-        name: cnping-exe
-        path: /**/*.deb
+        name: cnping-debian
+        path: /home/runner/**/*.deb
           
     - name: Validate AppStream data
       run: appstreamcli validate freedesktop/com.github.cntools.cnping.metainfo.xml
