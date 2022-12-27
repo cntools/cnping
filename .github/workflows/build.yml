@@ -30,7 +30,10 @@ jobs:
           build-essential \
           binutils-mingw-w64-i686 \
           gcc-mingw-w64-i686 \
-          g++-mingw-w64-i686
+          g++-mingw-w64-i686 \
+          devscripts \
+          appstream \
+          desktop-file-utils
 
     - name: Build
       run: make cnping cnping.exe
@@ -39,11 +42,22 @@ jobs:
       with:
         name: cnping-exe
         path: "*.exe"
-#    - name: Validate AppStream data
-#      run: appstreamcli validate /usr/share/metainfo/ ... .metainfo.xml
-#    - name: Validate desktop file
-#      run: desktop-file-validate /usr/share/applications/ ... .desktop
-
+        
+    - name: Build deb
+      run: debuild --no-sign
+      
+    - uses: actions/upload-artifact@v3
+      with:
+        name: cnping-debian
+        path: |
+          /home/runner/work/cnping/*.deb
+          /home/runner/work/cnping/*.ddeb
+          
+    - name: Validate AppStream data
+      run: appstreamcli validate freedesktop/com.github.cntools.cnping.metainfo.xml
+    - name: Validate desktop file
+      run: desktop-file-validate freedesktop/com.github.cntools.cnping.desktop
+      
 #  Build-RPM-for-Fedora:
 #    runs-on: ubuntu-latest
 #    container: dreua/ ...

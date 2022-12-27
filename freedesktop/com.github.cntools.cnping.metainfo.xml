@@ -30,6 +30,6 @@ as an overlay.
   <releases><!-- add new versions on top -->
     <release date="2019-10-04" version="1.0.0"/>
   </releases>
-  <project_license>MIT or BSD</project_license>
+  <project_license>MIT or BSD-3-Clause</project_license>
   <url type="bugtracker">https://github.com/cntools/cnping/issues</url>
 </component>
