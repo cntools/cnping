@@ -57,6 +57,13 @@ linuxinstall : cnping
 #	sudo chmod +t /usr/local/bin/cnping  #One option - set the stuid bit.
 #	sudo install cnping /usr/local/bin/  #Another option - using install.
 
+# minimal linux install, may be useful for development
+minlinuxinstall : cnping
+	sudo rm -f /usr/local/bin/cnping
+	sudo cp cnping /usr/local/bin/
+	sudo setcap cap_net_raw+ep /usr/local/bin/cnping
+
+
 
 # this target requires imagemagick
 updateicons : ${ICONSPATH}scalable/apps/${APPNAME}.svg
