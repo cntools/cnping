@@ -40,11 +40,6 @@ sudo setcap cap_net_raw+ep /usr/local/bin/cnping
 
 Note that if only http pinging is requested, you do not need cap_net_raw or root access.
 
-### Archlinux
-
- [cnping-git](https://aur.archlinux.org/packages/cnping-git/) in the [Arch User Repository](https://wiki.archlinux.org/index.php/Arch_User_Repository)
-
-
 ### Windows
 
 A Windows-exe can be cross compiled on Linux, just install the necessary dependencies and compile it:
@@ -53,3 +48,7 @@ A Windows-exe can be cross compiled on Linux, just install the necessary depende
 sudo apt install binutils-mingw-w64-i686 gcc-mingw-w64-i686 g++-mingw-w64-i686
 make cnping.exe
 ```
+
+### Other distributions
+
+See our Wiki page for information on more distributions, e.g. Arch, Void, Gentoo or Fedora: [Binary packages and distributions](https://github.com/cntools/cnping/wiki/Binary-packages-and-distributions)
