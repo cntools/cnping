@@ -39,11 +39,22 @@ jobs:
       with:
         name: cnping-exe
         path: "*.exe"
-#    - name: Validate AppStream data
-#      run: appstreamcli validate /usr/share/metainfo/ ... .metainfo.xml
-#    - name: Validate desktop file
-#      run: desktop-file-validate /usr/share/applications/ ... .desktop
-
+        
+    - name: Build deb
+      run: debuild --no-sign
+      
+    - uses: actions/upload-artifact@v3
+      with:
+        name: cnping-exe
+        path: |
+          "*.deb"
+          "*.ddeb"
+          
+    - name: Validate AppStream data
+      run: appstreamcli validate freedesktop/com.github.cntools.cnping.metainfo.xml
+    - name: Validate desktop file
+      run: desktop-file-validate freedesktop/com.github.cntools.cnping.desktop
+      
 #  Build-RPM-for-Fedora:
 #    runs-on: ubuntu-latest
 #    container: dreua/ ...
