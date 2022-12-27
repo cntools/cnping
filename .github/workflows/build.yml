@@ -31,7 +31,9 @@ jobs:
           binutils-mingw-w64-i686 \
           gcc-mingw-w64-i686 \
           g++-mingw-w64-i686 \
-          devscripts
+          devscripts \
+          appstream \
+          desktop-file-utils
 
     - name: Build
       run: make cnping cnping.exe
