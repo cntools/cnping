@@ -50,8 +50,8 @@ jobs:
       with:
         name: cnping-exe
         path: |
-          "*.deb"
-          "*.ddeb"
+          "**/*.deb"
+          "**/*.ddeb"
           
     - name: Validate AppStream data
       run: appstreamcli validate freedesktop/com.github.cntools.cnping.metainfo.xml
