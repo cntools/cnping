@@ -13,6 +13,7 @@ jobs:
         submodules: recursive
     - name: Install dependencies
       run: |
+        sudo apt-get update
         sudo apt-get install -y \
            debhelper-compat \
            libglvnd-dev \
@@ -21,7 +22,6 @@ jobs:
            libxinerama-dev \
            mesa-common-dev
            # Would be nice if we could pull those directly from debian/control
-           # Do we need to version-lock debhelper-compat?
     - name: Install more dependencies
       run: |
         sudo apt-get install -y \
