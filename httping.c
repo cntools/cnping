@@ -21,7 +21,8 @@
 #else
 	#include <sys/socket.h>
 	#include <netinet/in.h>
-	#include <netdb.h> 
+	#include <netinet/tcp.h>
+	#include <netdb.h>
 #endif
 
 #include "rawdraw/os_generic.h"
@@ -99,6 +100,12 @@ reconnect:
 		return;
 	}
 
+	int sockVal = 1;
+	if (setsockopt(httpsock, SOL_TCP, TCP_NODELAY, &sockVal, 4) != 0) {
+		ERRM ( "Error: Failed to set TCP_NODELAY\n");
+		// not a critical error, we can continue
+	}
+
 #if !defined( WIN32 ) && !defined( WINDOWS )
 	if(device)
 	{
@@ -128,7 +135,7 @@ reconnect:
 	{
 		char buf[8192];
 
-		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\n\r\n", eurl?eurl:"/favicon.ico" );
+		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\nHost: %s\r\n\r\n", eurl?eurl:"/favicon.ico", hostname );
 		int rs = send( httpsock, buf, n, MSG_NOSIGNAL );
 		double starttime = *timeouttime = OGGetAbsoluteTime();
 		int breakout = 0;
