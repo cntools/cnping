@@ -101,8 +101,9 @@ reconnect:
 	}
 
 	int sockVal = 1;
-	if (setsockopt(httpsock, SOL_TCP, TCP_NODELAY, &sockVal, 4) != 0) {
-		ERRM ( "Error: Failed to set TCP_NODELAY\n");
+	if (setsockopt(httpsock, SOL_TCP, TCP_NODELAY, &sockVal, 4) != 0)
+	{
+		ERRM( "Error: Failed to set TCP_NODELAY\n");
 		// not a critical error, we can continue
 	}
 
