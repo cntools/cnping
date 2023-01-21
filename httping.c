@@ -18,6 +18,7 @@
 	#else
 	#include <ws2tcpip.h>
 	#endif
+	#define SOL_TCP IPPROTO_TCP
 #else
 	#include <sys/socket.h>
 	#include <netinet/in.h>
@@ -98,7 +99,8 @@ reconnect:
 	}
 
 	int sockVal = 1;
-	if (setsockopt(httpsock, SOL_TCP, TCP_NODELAY, &sockVal, 4) != 0)
+	// using char* for sockVal for windows
+	if (setsockopt(httpsock, SOL_TCP, TCP_NODELAY, (char*) &sockVal, 4) != 0)
 	{
 		ERRM( "Error: Failed to set TCP_NODELAY\n");
 		// not a critical error, we can continue
@@ -113,7 +115,7 @@ reconnect:
 			exit( -1 );
 		}
 	}
-#endif
+#endif // not windows
 
 	/* connect: create a connection with the server */
 	if (connect(httpsock, (struct sockaddr*)&serveraddr, serveraddr_len) < 0)
