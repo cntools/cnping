@@ -64,9 +64,6 @@ void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile do
 
 	int portno = 80;
 
-	(*seqnoptr) ++;
-	HTTPingCallbackStart( *seqnoptr );
-
 	if( eportmarker )
 	{
 		portno = atoi( eportmarker+1 );
@@ -137,6 +134,10 @@ reconnect:
 		char buf[8192];
 
 		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\nHost: %s\r\n\r\n", eurl?eurl:"/favicon.ico", hostname );
+
+		(*seqnoptr) ++;
+		HTTPingCallbackStart( *seqnoptr );
+
 		int rs = send( httpsock, buf, n, MSG_NOSIGNAL );
 		double starttime = *timeouttime = OGGetAbsoluteTime();
 		int breakout = 0;
@@ -175,8 +176,6 @@ reconnect:
 		double delay_time = minperiod - (*timeouttime - starttime);
 		if( delay_time > 0 )
 			usleep( (int)(delay_time * 1000000) );
-		(*seqnoptr) ++;
-		HTTPingCallbackStart( *seqnoptr );
 		if( !breakout ) {
 #ifdef WIN32
 			closesocket( httpsock );
