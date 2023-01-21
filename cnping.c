@@ -775,6 +775,17 @@ int main( int argc, const char ** argv )
 	}
 	else
 	{
+		char* protoEnd = strstr( pinghost, "://" );
+		if ( protoEnd )
+		{
+			int protoSize = protoEnd - pinghost;
+			char protoBuffer[protoSize + 1];
+			memcpy( protoBuffer, pinghost, protoSize );
+			protoBuffer[protoSize] = '\0';
+			ERRM( "Protocol \"%s\" is not supported\n", protoBuffer );
+			exit( -1 );
+		}
+
 		ping_setup( pinghost, device );
 		OGCreateThread( PingSend, 0 );
 		OGCreateThread( PingListen, 0 );
