@@ -1,3 +1,7 @@
 [submodule "rawdraw"]
 	path = rawdraw
 	url = https://github.com/cntools/rawdraw
+[submodule "clang-format"]
+	path = clang-format
+	url = git@github.com:dreua/colorchord.git
+	branch = clang-format-only
