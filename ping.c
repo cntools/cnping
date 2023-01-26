@@ -166,26 +166,26 @@ void ping( struct sockaddr *addr, socklen_t addr_len )
 #ifndef MINGW_BUILD
 #pragma comment( lib, "Ws2_32.lib" )
 #endif
+#include <stdint.h>
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <stdint.h>
 #else // ! WIN32
 #ifdef __FreeBSD__
 #include <netinet/in.h>
 #endif
-#include <unistd.h>
-#include <sys/socket.h>
-#include <resolv.h>
 #include <netdb.h>
+#include <resolv.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #if defined( __APPLE__ ) || defined( __FreeBSD__ )
 #ifndef SOL_IP
 #define SOL_IP IPPROTO_IP
 #endif
 #endif
+#include <netinet/icmp6.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#include <netinet/icmp6.h>
 #endif
 
 #include "rawdraw/os_generic.h"
@@ -453,7 +453,7 @@ void ping_setup( const char *strhost, const char *device )
 		if ( setsockopt( sd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen( device ) + 1 ) != 0 )
 		{
 			ERRM( "Error: Failed to set Device option.  Are you root?  Or can do sock_raw "
-			      "sockets?\n" );
+				  "sockets?\n" );
 			exit( -1 );
 		}
 	}

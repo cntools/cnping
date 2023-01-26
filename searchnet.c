@@ -59,7 +59,7 @@ int main( int argc, char **argv )
 	if ( argc != 4 )
 	{
 		fprintf( stderr, "Usage: [searchnet IP net] [mask (single #, i.e. 24)] [speed (in seconds "
-		                 "per attempt)]\n" );
+						 "per attempt)]\n" );
 		return -1;
 	}
 

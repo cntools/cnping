@@ -20,10 +20,10 @@
 #endif
 #define SOL_TCP IPPROTO_TCP
 #else
-#include <sys/socket.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <netdb.h>
+#include <sys/socket.h>
 #endif
 
 #include "error_handling.h"

@@ -399,11 +399,11 @@ void DrawFrameHistogram()
 #ifdef WIN32
 		snprintf( stt, 1024,
 			"Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss "
-		    "%I64u/%I64u = %6.3f%%",
+			"%I64u/%I64u = %6.3f%%",
 #else
 		snprintf( stt, 1024,
 			"Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss "
-		    "%lu/%lu = %6.3f%%",
+			"%lu/%lu = %6.3f%%",
 #endif
 			pinghost, globmaxtime * 1000.0, globinterval * 1000.0, globallost, globalrx,
 			globallost * 100.0 / ( globalrx + globallost ) );
@@ -722,12 +722,12 @@ int main( int argc, const char **argv )
 		ERRM( "cnping " VERSION
 			  " Usage: cnping [host] [period] [extra size] [y-axis scaling] [window title]\n"
 			  "   (-h) [host]                 -- domain, IP address of ping target for ICMP or "
-		      "http host, i.e. http://google.com\n"
+			  "http host, i.e. http://google.com\n"
 			  "   (-p) [period]               -- period in seconds (optional), default 0.02 \n"
 			  "   (-s) [extra size]           -- ping packet extra size (above 12), optional, "
-		      "default = 0 \n"
+			  "default = 0 \n"
 			  "   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto "
-		      "scaling (optional)\n"
+			  "scaling (optional)\n"
 			  "   (-t) [window title]         -- the title of the window (optional)\n"
 			  "   (-I) [interface]            -- Sets source interface (i.e. eth0)\n" );
 		return -1;

@@ -10,9 +10,9 @@
 #else // !WIN32
 #include <arpa/inet.h> // inet_pton (parsing ipv4 and ipv6 notation)
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #endif
 
 int resolveName( struct sockaddr *addr, socklen_t *addr_len, const char *hostname, int family )
