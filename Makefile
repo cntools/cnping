@@ -1,14 +1,14 @@
-CFLAGS?=-s -Os -I/opt/X11/include -Wall
-LDFLAGS?=-s -L/opt/X11/lib/
-CC?=gcc
+CFLAGS ?= -s -Os -I/opt/X11/include -Wall
+LDFLAGS ?= -s -L/opt/X11/lib/
+CC? = gcc
 
-ICONSPATH=freedesktop/icons/hicolor/
-APPNAME=com.github.cntools.cnping
+ICONSPATH = freedesktop/icons/hicolor/
+APPNAME = com.github.cntools.cnping
 
 all : cnping
 
-#CFLAGS:=$(CFLAGS) -DCNFGOGL
-#LDFLAGS:=$(LDFLAGS) -lGL
+#CFLAGS := $(CFLAGS) -DCNFGOGL
+#LDFLAGS := $(LDFLAGS) -lGL
 
 clean :
 	rm -rf *.o *~ cnping cnping.exe cnping_mac searchnet
@@ -17,11 +17,15 @@ clean :
 
 # Windows
 
-#MINGW32:=/usr/bin/i686-w64-mingw32-
-MINGW32?=i686-w64-mingw32-
+#MINGW32 := /usr/bin/i686-w64-mingw32-
+MINGW32 ?= i686-w64-mingw32-
 
 # If you don't need admin privileges
-ADMINFLAGS:= $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
+ADMINFLAGS := $(ADMINFLAGS) -DWIN_USE_NO_ADMIN_PING
+
+# Add git version to CFLAGS
+GIT_VERSION := "$(shell git describe --abbrev=4 --dirty --always --tags)"
+CFLAGS += -DVERSION=\"$(GIT_VERSION)\"
 
 cnping-wingdi.exe : cnping.c ping.c httping.c resources.o
 	$(MINGW32)gcc -g -fno-ident -mwindows -m32 $(CFLAGS) -o $@ $^  -lgdi32 -lws2_32 -s -D_WIN32_WINNT=0x0600 -DWIN32 -liphlpapi -DMINGW_BUILD $(ADMINFLAGS)
