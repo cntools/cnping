@@ -14,6 +14,8 @@ clean :
 	rm -rf *.o *~ cnping cnping.exe cnping_mac searchnet
 	rm -rf rawdraw/*.o
 
+format-all:
+	find . -iname "*.h" -o -iname "*.c" | xargs clang-format -i
 
 # Windows
 
