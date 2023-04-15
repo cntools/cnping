@@ -22,6 +22,7 @@ float pingperiodseconds;
 int precise_ping;
 struct sockaddr_in6 psaddr;
 socklen_t psaddr_len;
+int using_regular_ping;
 
 #ifdef WIN_USE_NO_ADMIN_PING
 
@@ -54,7 +55,10 @@ void ping_setup(const char * strhost, const char * device)
 {
 	// resolve host
 	psaddr_len = sizeof(psaddr);
-	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
+	if( strhost )
+		resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
+	else
+		psaddr.sin6_family = AF_INET;
 
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
@@ -123,11 +127,50 @@ static void * pingerthread( void * v )
 	return 0;
 }
 
+void singleping(struct sockaddr *addr, socklen_t addr_len )
+{
+	int i;
+	(void) addr;
+	(void) addr_len;
+
+	if( psaddr.sin6_family != AF_INET )
+	{
+		// ipv6 ICMP Ping is not supported on windows
+		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
+		exit( -1 );
+	}
+
+	static int did_init_threads = 0;
+	if( !did_init_threads )
+	{
+		did_init_threads = 1;
+		//Launch pinger threads
+		for( i = 0; i < PINGTHREADS; i++ )
+		{
+			HANDLE ih = pinghandles[i] = IcmpCreateFile();
+			if( ih == INVALID_HANDLE_VALUE )
+			{
+				ERRM( "Cannot create ICMP thread %d\n", i );
+				exit( 0 );
+			}
+
+			OGCreateThread( pingerthread, &pinghandles[i] );
+		}
+	}
+	//This function is executed as a thread after setup.
+
+	if( i >= PINGTHREADS-1 ) i = 0;
+	else i++;
+	OGUnlockSema( s_ping );
+}
+
 void ping(struct sockaddr *addr, socklen_t addr_len )
 {
 	int i;
 	(void) addr;
 	(void) addr_len;
+
+	using_regular_ping = 1;
 
 	if( psaddr.sin6_family != AF_INET )
 	{
@@ -335,7 +378,7 @@ void listener()
 		if( !isICMPResponse(buf, bytes) ) continue;
 
 		// compare the sender
-		if( memcmp(&addr, &psaddr, addrlenval) != 0 ) continue;
+		if( using_regular_ping && memcmp(&addr, &psaddr, addrlenval) != 0 ) continue;
 
 		// sizeof(packet.hdr) + 20
 		int offset = 0;
@@ -366,10 +409,64 @@ void listener()
 	exit( 0 );
 }
 
+void singleping(struct sockaddr *addr, socklen_t addr_len )
+{
+	int cnt=1;
+
+#ifdef WIN32
+	{
+		//Setup windows socket for nonblocking io.
+		unsigned long iMode = 1;
+		ioctlsocket(sd, FIONBIO, &iMode);
+	}
+#else
+	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
+		ERRM("Warning: Request nonblocking I/O failed.");
+#endif
+
+	double stime = OGGetAbsoluteTime();
+
+	struct packet pckt;
+
+	{
+		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
+		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
+#ifdef __FreeBSD__
+		pckt.hdr.icmp_code = 0;
+		pckt.hdr.icmp_type = ICMP_ECHO;
+		pckt.hdr.icmp_id = pid;
+		pckt.hdr.icmp_seq = cnt++;
+		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#else
+		pckt.hdr.code = 0;
+		pckt.hdr.type = (psaddr.sin6_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
+		pckt.hdr.un.echo.id = pid;
+		pckt.hdr.un.echo.sequence = cnt++;
+		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+#endif
+
+		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, addr, addr_len);
+
+		if( sr <= 0 )
+		{
+			ping_failed_to_send = 1;
+			if( using_regular_ping )
+			{
+				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
+			}
+		}
+		else
+		{
+			ping_failed_to_send = 0;
+		}
+	} 
+}
+
 void ping(struct sockaddr *addr, socklen_t addr_len )
 {
 	int cnt=1;
 
+	using_regular_ping = 1;
 #ifdef WIN32
 	{
 		//Setup windows socket for nonblocking io.
@@ -407,7 +504,10 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 		if( sr <= 0 )
 		{
 			ping_failed_to_send = 1;
-			ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
+			if( using_regular_ping )
+			{
+				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
+			}
 		}
 		else
 		{
@@ -433,7 +533,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 			}
 		}
 	} 	while( pingperiodseconds >= 0 );
-	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather  from ping_setup.  We may want to run this multiple times.
+	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather from ping_setup.  We may want to run this multiple times.
 }
 
 void ping_setup(const char * strhost, const char * device)
@@ -463,7 +563,11 @@ void ping_setup(const char * strhost, const char * device)
 #else
 	// resolve host
 	psaddr_len = sizeof(psaddr);
-	resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_UNSPEC);
+
+	if( strhost )
+		resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_UNSPEC);
+	else
+		psaddr.sin6_family = AF_INET;
 
 	sd = createSocket();
 
