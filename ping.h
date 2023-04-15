@@ -22,6 +22,8 @@ void listener();
 void ping(struct sockaddr *addr, socklen_t addr_len );
 void do_pinger( );
 
+void singleping(struct sockaddr *addr, socklen_t addr_len ); // If using this, must call ping_setup( 0, 0); to begin.
+
 //If pingperiodseconds = -1, run ping/do_pinger once and exit.
 extern float pingperiodseconds;
 extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only approximate, if 1, spinlock until precise time for ping is hit.

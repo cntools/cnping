@@ -5,10 +5,13 @@
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "resolve.h"
 #include "rawdraw/os_generic.h"
 
 uint32_t my_random_key;
 uint8_t send_id[4];
+
+extern float pingperiodseconds;
 
 void * PingListen( void * r )
 {
@@ -50,7 +53,7 @@ int main( int argc, char ** argv )
 	char dispip[32];
 	float speed;
 
-	ping_setup();
+	ping_setup( 0, 0);
 	OGCreateThread( PingListen, 0 );
 	srand( ((int)(OGGetAbsoluteTime()*10000)) );
 	my_random_key = rand();
@@ -77,7 +80,11 @@ int main( int argc, char ** argv )
 		send_id[3] = (cur)&0xff;
 //		printf( "Pinging: %s\n", dispip );
 		pingperiodseconds = -1;
-		do_pinger( dispip );
+
+		struct sockaddr_in6 psaddr;
+		socklen_t psaddr_len = sizeof(psaddr);
+		resolveName((struct sockaddr*) &psaddr, &psaddr_len, dispip, AF_UNSPEC);
+		singleping((struct sockaddr*) &psaddr, psaddr_len );
 
 		OGUSleep( (int)(speed * 1000000) );
 	}

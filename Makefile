@@ -48,7 +48,7 @@ cnping_ogl : cnping.c ping.c httping.c resolve.c
 cnping_mac : cnping.c ping.c httping.c resolve.c
 	$(CC) -o cnping $^ -x objective-c -framework Cocoa -framework QuartzCore -lm -lpthread -DOSX
 
-searchnet : ping.o searchnet.o
+searchnet : ping.c searchnet.c resolve.c
 	$(CC) $(CFLAGS) -o $@ $^ -lpthread
 
 linuxinstall : cnping
