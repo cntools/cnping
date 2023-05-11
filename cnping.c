@@ -527,7 +527,7 @@ void DrawFrame( void )
 		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
 #endif
 		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
-		globallost, globalrx, globallost*100.0f/(globalrx+globallost), loss );
+		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), loss );
 
 	DrawMainText( stbuf );
 	OGUSleep( 1000 );
