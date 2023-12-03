@@ -58,13 +58,31 @@ jobs:
     - name: Validate desktop file
       run: desktop-file-validate freedesktop/com.github.cntools.cnping.desktop
       
-#  Build-RPM-for-Fedora:
-#    runs-on: ubuntu-latest
-#    container: dreua/ ...
-#    steps:
-#    - name: RPM Build
-#      run: /cnping/cnping-build
-#    - uses: actions/upload-artifact@v3
-#      with:
-#        name: cnping-fedora-rpm
-#        path: /github/home/rpmbuild/**/*.rpm
+  Build-RPM-for-Fedora:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+    # No checkout needed
+    - name: Install dependencies
+      run: |
+        sudo dnf install -y \
+            rpm-build rpmdevtools \
+            gcc \
+            make \
+            libXinerama-devel \
+            libXext-devel \
+            libX11-devel \
+            libappstream-glib \
+            desktop-file-utils 
+    - name: Prepare build environment
+      run: |
+        curl -o cnping.spec -L https://raw.githubusercontent.com/dreua/cnping-rpmspec/nightly/cnping.spec
+        mkdir -p ~/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
+    - name: Download source as described in spec
+      run: spectool --get-files --sourcedir cnping.spec
+    - name: Build RPM
+      run: rpmbuild -ba cnping.spec
+    - uses: actions/upload-artifact@v3
+      with:
+        name: cnping-fedora-rpm
+        path: /github/home/rpmbuild/**/*.rpm
