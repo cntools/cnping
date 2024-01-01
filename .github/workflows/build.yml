@@ -38,7 +38,7 @@ jobs:
     - name: Build
       run: make cnping cnping.exe
         
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: cnping-exe
         path: "*.exe"
@@ -46,7 +46,7 @@ jobs:
     - name: Build deb
       run: debuild --no-sign
       
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: cnping-debian
         path: |
@@ -64,7 +64,7 @@ jobs:
 #    steps:
 #    - name: RPM Build
 #      run: /cnping/cnping-build
-#    - uses: actions/upload-artifact@v3
+#    - uses: actions/upload-artifact@v4
 #      with:
 #        name: cnping-fedora-rpm
 #        path: /github/home/rpmbuild/**/*.rpm
