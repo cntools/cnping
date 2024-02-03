@@ -424,8 +424,6 @@ void singleping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_
 		ERRM("Warning: Request nonblocking I/O failed.");
 #endif
 
-	double stime = OGGetAbsoluteTime();
-
 	struct packet pckt;
 
 	{

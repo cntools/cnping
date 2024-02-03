@@ -67,10 +67,7 @@ unsigned long iframeno = 0;
 short screenx, screeny;
 float GuiYScaleFactor;
 int GuiYscaleFactorIsConstant;
-double globmaxtime, globmintime = 1e20;
-double globinterval, globlast;
-uint64_t globalrx;
-uint64_t globallost;
+
 // Ping Data. Will be overwritten with random bytes when !DEBUG
 uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
@@ -79,6 +76,7 @@ uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 #define BUTTON_Y 16
 
 struct PingData * PingData = NULL;
+unsigned int pinghostListSize = 0;
 
 
 int ExtraPingSize;
@@ -122,7 +120,7 @@ void HandleGotPacket( struct PingData * pd, int seqno, int timeout )
 	{
 		if( pd->PingRecvTimes[seqno] < -0.5 ) return;
 
-		globallost++;
+		pd->globallost++;
 		pd->PingRecvTimes[seqno] = -1;
 		hist_counts[MAX_HISTO_MARKS-1]++;
 		return;
@@ -134,19 +132,19 @@ void HandleGotPacket( struct PingData * pd, int seqno, int timeout )
 
 	pd->PingRecvTimes[seqno] = OGGetAbsoluteTime();
 	double Delta = pd->PingRecvTimes[seqno] - pd->PingSendTimes[seqno];
-	if( Delta > globmaxtime ) { globmaxtime = Delta; }
-	if( Delta < globmintime ) { globmintime = Delta; }
+	if( Delta > pd->globmaxtime ) { pd->globmaxtime = Delta; }
+	if( Delta < pd->globmintime ) { pd->globmintime = Delta; }
 	int slot = Delta * 10000;
 	if( slot >= MAX_HISTO_MARKS ) slot = MAX_HISTO_MARKS-1;
 	if( slot < 0 ) slot = 0;
 	hist_counts[slot]++;
 
-	if( globlast > 0.5 )
+	if( pd->globlast > 0.5 )
 	{
-		if( Now - globlast > globinterval ) globinterval = Now - globlast;
+		if( Now - pd->globlast > pd->globinterval ) pd->globinterval = Now - pd->globlast;
 	}
-	globlast = Now;
-	globalrx++;
+	pd->globlast = Now;
+	pd->globalrx++;
 }
 
 void HTTPingCallbackStart( int seqno, unsigned int pingHostId )
@@ -240,12 +238,16 @@ void HandleKey( int keycode, int bDown )
 			break;
 		case 'c':
 			memset( hist_counts, 0, sizeof( hist_counts ) );
-			globmaxtime = 0;
-			globmintime = 1e20;
-			globinterval = 0;
-			globlast = 0;
-			globalrx = 0;
-			globallost = 0;
+			for ( unsigned int i = 0; i < pinghostListSize; ++i )
+			{
+				struct PingData * pd = PingData + i;
+				pd->globmaxtime = 0;
+				pd->globmintime = 1e20;
+				pd->globinterval = 0;
+				pd->globlast = 0;
+				pd->globalrx = 0;
+				pd->globallost = 0;
+			}
 			break;
 		case 'q':
 			exit(0);
@@ -318,10 +320,11 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 {
 	int i;
 //	double Now = OGGetAbsoluteTime();
+	const struct PingData * pd = PingData + pingHostId;
 	const int colwid = 50;
 	int categories = (screenx-50)/colwid;
-	int maxpingslot = ( globmaxtime*10000.0 );
-	int minpingslot = ( globmintime*10000.0 );
+	int maxpingslot = ( pd->globmaxtime*10000.0 );
+	int minpingslot = ( pd->globmintime*10000.0 );
 	int slots = maxpingslot-minpingslot;
 
 	unsigned int assignedScreenHeight = screeny / count;
@@ -440,7 +443,7 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 #else
 		snprintf( stt, 1024, "Host: %s\nHistorical max  %9.2fms\nBiggest interval%9.2fms\nHistorical packet loss %lu/%lu = %6.3f%%",
 #endif
-			pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
+			pinghost, pd->globmaxtime*1000.0, pd->globinterval*1000.0, pd->globallost, pd->globalrx, pd->globallost*100.0/(pd->globalrx+pd->globallost) );
 		if( !in_frame_mode )
 			DrawMainText( stt, heightOffset );
 		return;
@@ -568,8 +571,8 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int pingHost
 #else
 		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
 #endif
-		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
-		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), loss );
+		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, pd->globmaxtime*1000, avg, pd->globinterval*1000.0, stddev,
+		pd->globallost, pd->globalrx+pd->globallost, pd->globallost*100.0f/(pd->globalrx+pd->globallost), loss );
 
 	DrawMainText( stbuf, heightOffset );
 
@@ -718,7 +721,7 @@ int main( int argc, const char ** argv )
 	double frameperiodseconds;
 	const char * device = NULL;
 	struct PingHost * pinghostList = NULL;
-	unsigned int pinghostListSize = 0;
+	pinghostListSize = 0;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -840,6 +843,11 @@ int main( int argc, const char ** argv )
 
 	// allocate pingdata; calloc gurantees zero filled memory
 	PingData = calloc( pinghostListSize, sizeof(struct PingData) );
+	for( unsigned int i = 0; i < pinghostListSize; ++i )
+	{
+		PingData[i].globmaxtime = 0;
+		PingData[i].globmintime = 1e20;
+	}
 
 	// iterate over all ping hosts and create ping threads for them
 	unsigned int pingHostId = 0;

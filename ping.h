@@ -16,6 +16,10 @@ struct PingData
 	double PingSendTimes [PINGCYCLEWIDTH];
 	double PingRecvTimes [PINGCYCLEWIDTH];
 	int current_cycle;
+	double globmaxtime, globmintime;
+	double globinterval, globlast;
+	uint64_t globalrx;
+	uint64_t globallost;
 };
 
 extern struct PingData * PingData;
