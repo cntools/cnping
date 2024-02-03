@@ -57,7 +57,6 @@
 unsigned frames = 0;
 unsigned long iframeno = 0;
 short screenx, screeny;
-const char * pinghost;
 float GuiYScaleFactor;
 int GuiYscaleFactorIsConstant;
 double globmaxtime, globmintime = 1e20;
@@ -307,7 +306,7 @@ void DrawMainText( const char * stbuf )
 	CNFGDrawText( stbuf, 2 );
 }
 
-void DrawFrameHistogram()
+void DrawFrameHistogram( const char * pinghost )
 {
 	int i;
 //	double Now = OGGetAbsoluteTime();
@@ -441,7 +440,7 @@ nodata:
 }
 
 
-void DrawFrame( void )
+void DrawFrame( const char * pinghost )
 {
 	int i;
 
@@ -687,6 +686,7 @@ int main( int argc, const char ** argv )
 	double SecToWait;
 	double frameperiodseconds;
 	const char * device = NULL;
+	const char * pinghost = NULL;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -839,12 +839,12 @@ int main( int argc, const char ** argv )
 
 		if( in_frame_mode )
 		{
-			DrawFrame();
+			DrawFrame( pinghost );
 		}
 
 		if( in_histogram_mode )
 		{
-			DrawFrameHistogram();
+			DrawFrameHistogram( pinghost );
 		}
 
 		CNFGPenX = 100; CNFGPenY = 100;
