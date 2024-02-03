@@ -65,7 +65,7 @@ void ping_setup(const char * strhost, const char * device)
 	//This function is executed first.
 }
 
-void listener()
+void listener( unsigned int pingHostId )
 {
 	static uint8_t listth;
 	if( listth ) return;
@@ -127,7 +127,7 @@ static void * pingerthread( void * v )
 	return 0;
 }
 
-void singleping(struct sockaddr *addr, socklen_t addr_len )
+void singleping(unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
 {
 	int i;
 	(void) addr;
@@ -164,7 +164,7 @@ void singleping(struct sockaddr *addr, socklen_t addr_len )
 	OGUnlockSema( s_ping );
 }
 
-void ping(struct sockaddr *addr, socklen_t addr_len )
+void ping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
 {
 	int i;
 	(void) addr;
@@ -348,7 +348,7 @@ int createSocket()
 	return -1;
 }
 
-void listener()
+void listener( unsigned int pingHostId )
 {
 #ifndef WIN32
 	int sd = createSocket();
@@ -396,7 +396,7 @@ void listener()
 		}
 
 		if ( bytes > 0 )
-			display(buf + offset, bytes - offset );
+			display(buf + offset, bytes - offset, pingHostId );
 		else
 		{
 			ERRM("Error: recvfrom failed");
@@ -409,7 +409,7 @@ void listener()
 	exit( 0 );
 }
 
-void singleping(struct sockaddr *addr, socklen_t addr_len )
+void singleping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
 {
 	int cnt=1;
 
@@ -429,7 +429,7 @@ void singleping(struct sockaddr *addr, socklen_t addr_len )
 	struct packet pckt;
 
 	{
-		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
+		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ), PingData + pingHostId );
 		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
 #ifdef __FreeBSD__
 		pckt.hdr.icmp_code = 0;
@@ -462,7 +462,7 @@ void singleping(struct sockaddr *addr, socklen_t addr_len )
 	} 
 }
 
-void ping(struct sockaddr *addr, socklen_t addr_len )
+void ping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
 {
 	int cnt=1;
 
@@ -483,7 +483,7 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 	struct packet pckt;
 	do
 	{
-		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
+		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ), PingData+pingHostId );
 		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
 #ifdef __FreeBSD__
 		pckt.hdr.icmp_code = 0;
@@ -594,9 +594,9 @@ void ping_setup(const char * strhost, const char * device)
 #endif // WIN_USE_NO_ADMIN_PING
 
 
-void do_pinger( )
+void do_pinger( unsigned int pingHostId )
 {
-	ping((struct sockaddr*) &psaddr, psaddr_len );
+	ping( pingHostId, (struct sockaddr*) &psaddr, psaddr_len );
 }
 
 // used by the ERRMB makro from error_handling.h
