@@ -361,9 +361,9 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 		for( i = 0; i < rslots; i++ )
 		{
 			CNFGColor( 0x33cc33ff );
-			int top = 30;
+			int top = heightOffset + 30;
 			uint64_t samps = samples[i];
-			int bottom = assignedScreenHeight - 50;
+			int bottom = heightOffset + assignedScreenHeight - 50;
 			int height = samps?(samps * (bottom-top) / highestchart + 1):0;
 			int startx = (i+1) * (screenx-50) / rslots;
 			int endx = (i+2) * (screenx-50) / rslots;
@@ -402,7 +402,7 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 			}
 
 
-			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+heightOffset+3;
+			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+3;
 #ifdef WIN32
 			sprintf( stbuf, "%I64u", samps );
 #else
@@ -410,7 +410,7 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 #endif
 			CNFGDrawText( stbuf, 2 );
 
-			CNFGPenX = startx; CNFGPenY = bottom+heightOffset+14;
+			CNFGPenX = startx; CNFGPenY = bottom+14;
 			sprintf( stbuf, "%5.1fms\n%5.1fms", ssmsMIN[i]/10.0, ssmsMAX[i]/10.0 );
 			CNFGDrawText( stbuf, 2 );
 		}
