@@ -56,7 +56,8 @@
 
 
 // linked list of hosts to ping
-struct PingHost {
+struct PingHost
+{
 	const char * host;
 	struct PingHost* next;
 };
@@ -73,16 +74,14 @@ uint64_t globallost;
 // Ping Data. Will be overwritten with random bytes when !DEBUG
 uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
-#define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
 
-double PingSendTimes[PINGCYCLEWIDTH];
-double PingRecvTimes[PINGCYCLEWIDTH];
-int current_cycle = 0;
+struct PingData * PingData = NULL;
+
 
 int ExtraPingSize;
 int in_histogram_mode, in_frame_mode = 1;
-void HandleGotPacket( int seqno, int timeout );
+void HandleGotPacket( struct PingData * pd, int seqno, int timeout );
 
 #if defined( WINDOWS ) || defined( WIN32 )
 WSADATA wsaData;
@@ -92,44 +91,44 @@ WSADATA wsaData;
 #define MAX_HISTO_MARKS (TIMEOUT*10000)
 uint64_t hist_counts[MAX_HISTO_MARKS];
 
-void HandleNewPacket( int seqno )
+void HandleNewPacket( struct PingData * pd, int seqno )
 {
 	double Now = OGGetAbsoluteTime();
-	PingSendTimes[seqno] = Now;
-	PingRecvTimes[seqno] = 0;
+	pd->PingSendTimes[seqno] = Now;
+	pd->PingRecvTimes[seqno] = 0;
 	static int timeoutmark;
 
-	while( Now - PingSendTimes[timeoutmark] > TIMEOUT )
+	while( Now - pd->PingSendTimes[timeoutmark] > TIMEOUT )
 	{
-		if( PingRecvTimes[timeoutmark] < PingSendTimes[timeoutmark] )
+		if( pd->PingRecvTimes[timeoutmark] < pd->PingSendTimes[timeoutmark] )
 		{
-			HandleGotPacket( timeoutmark, 1 );
+			HandleGotPacket( pd, timeoutmark, 1 );
 		}
 		timeoutmark++;
 		if( timeoutmark >= PINGCYCLEWIDTH ) timeoutmark = 0;
 	}
 }
 
-void HandleGotPacket( int seqno, int timeout )
+void HandleGotPacket( struct PingData * pd, int seqno, int timeout )
 {
 	double Now = OGGetAbsoluteTime();
 
 	if( timeout )
 	{
-		if( PingRecvTimes[seqno] < -0.5 ) return;
+		if( pd->PingRecvTimes[seqno] < -0.5 ) return;
 
 		globallost++;
-		PingRecvTimes[seqno] = -1;
+		pd->PingRecvTimes[seqno] = -1;
 		hist_counts[MAX_HISTO_MARKS-1]++;
 		return;
 	}
 
-	if( PingRecvTimes[seqno] >= PingSendTimes[seqno] ) return;
-	if( PingSendTimes[seqno] < 1 )  return;
-	if( Now - PingSendTimes[seqno] > TIMEOUT ) return;
+	if( pd->PingRecvTimes[seqno] >= pd->PingSendTimes[seqno] ) return;
+	if( pd->PingSendTimes[seqno] < 1 )  return;
+	if( Now - pd->PingSendTimes[seqno] > TIMEOUT ) return;
 
-	PingRecvTimes[seqno] = OGGetAbsoluteTime();
-	double Delta = PingRecvTimes[seqno] - PingSendTimes[seqno];
+	pd->PingRecvTimes[seqno] = OGGetAbsoluteTime();
+	double Delta = pd->PingRecvTimes[seqno] - pd->PingSendTimes[seqno];
 	if( Delta > globmaxtime ) { globmaxtime = Delta; }
 	if( Delta < globmintime ) { globmintime = Delta; }
 	int slot = Delta * 10000;
@@ -145,65 +144,67 @@ void HandleGotPacket( int seqno, int timeout )
 	globalrx++;
 }
 
-
-void HTTPingCallbackStart( int seqno )
+void HTTPingCallbackStart( int seqno, unsigned int pingHostId )
 {
-	current_cycle = seqno;
-	HandleNewPacket( seqno );
+	struct PingData * pd = PingData + pingHostId;
+	pd->current_cycle = seqno;
+	HandleNewPacket( pd, seqno );
 }
 
-void HTTPingCallbackGot( int seqno )
+void HTTPingCallbackGot( int seqno, unsigned int pingHostId )
 {
-	HandleGotPacket( seqno, 0 );
+	struct PingData * pd = PingData + pingHostId;
+	HandleGotPacket( pd, seqno, 0 );
 }
 
-void display(uint8_t *buf, int bytes)
+void display( uint8_t *buf, int bytes, unsigned int pingHostId )
 {
+	struct PingData * pd = PingData + pingHostId;
 	int reqid = (buf[0] << 24) | (buf[1]<<16) | (buf[2]<<8) | (buf[3]);
 	debug("Received ping: reqid=%d\n", reqid);
 	reqid &= (PINGCYCLEWIDTH-1);
 	if( memcmp( buf+4, pattern, sizeof(pattern) ) != 0 ) return;
 	debug("Memcmp OK, checked %ld bytes, first values being %x %x %x %x\n",
 		  (long int) sizeof(pattern), pattern[0], pattern[1], pattern[2], pattern[3])
-	HandleGotPacket( reqid, 0 );
+	HandleGotPacket( pd, reqid, 0 );
 }
 
-int load_ping_packet( uint8_t * buffer, int bufflen )
+int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData * pd )
 {
-	buffer[0] = current_cycle >> 24;
-	buffer[1] = current_cycle >> 16;
-	buffer[2] = current_cycle >> 8;
-	buffer[3] = current_cycle >> 0;
+	buffer[0] = pd->current_cycle >> 24;
+	buffer[1] = pd->current_cycle >> 16;
+	buffer[2] = pd->current_cycle >> 8;
+	buffer[3] = pd->current_cycle >> 0;
 
 	memcpy( buffer+4, pattern, sizeof(pattern) );
 
 	if( ping_failed_to_send )
 	{
-		PingSendTimes[(current_cycle+PINGCYCLEWIDTH-1)&(PINGCYCLEWIDTH-1)] = 0; //Unset ping send.
+		pd->PingSendTimes[(pd->current_cycle+PINGCYCLEWIDTH-1)&(PINGCYCLEWIDTH-1)] = 0; //Unset ping send.
 	}
 
-	HandleNewPacket( current_cycle&(PINGCYCLEWIDTH-1) );
+	HandleNewPacket( pd, pd->current_cycle&(PINGCYCLEWIDTH-1) );
 
-	current_cycle++;
+	pd->current_cycle++;
 
 	return 12 + ExtraPingSize;
 }
 
 void * PingListen( void * r )
 {
-	listener();
+	unsigned int pingHostId = (unsigned int) r;
+	listener( pingHostId );
 	ERRM( "Fault on listen.\n" );
 	exit( -2 );
 }
 
 void * PingSend( void * r )
 {
-	do_pinger( );
+	unsigned int pingHostId = (unsigned int) r;
+	do_pinger( pingHostId );
 	ERRM( "Fault on ping.\n" );
 	exit( -1 );
 }
-
-
 
 
 void HandleKey( int keycode, int bDown )
@@ -252,16 +253,16 @@ void HandleMotion( int x, int y, int mask ){}
 void HandleDestroy() { exit(0); }
 
 
-double GetWindMaxPingTime( void )
+double GetWindMaxPingTime( const struct PingData * pd )
 {
 	int i;
 	double maxtime = 0;
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
-		double st = PingSendTimes[index];
-		double rt = PingRecvTimes[index];
+		int index = ((pd->current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		double st = pd->PingSendTimes[index];
+		double rt = pd->PingRecvTimes[index];
 
 		double dt = 0;
 
@@ -290,7 +291,7 @@ void DrawMainText( const char * stbuf, unsigned int yOffset )
 	CNFGDrawText( stbuf, 2 );
 }
 
-void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int num )
+void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int pingHostId )
 {
 	int i;
 //	double Now = OGGetAbsoluteTime();
@@ -301,7 +302,7 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 	int slots = maxpingslot-minpingslot;
 
 	unsigned int assignedScreenHeight = screeny / count;
-	unsigned int heightOffset = assignedScreenHeight * num;
+	unsigned int heightOffset = assignedScreenHeight * pingHostId;
 
 	if( categories <= 2 )
 	{
@@ -427,11 +428,13 @@ nodata:
 }
 
 
-void DrawFrame( const char * pinghost, unsigned int count, unsigned int num )
+void DrawFrame( const char * pinghost, unsigned int count, unsigned int pingHostId )
 {
 	int i;
 
 	double now = OGGetAbsoluteTime();
+
+	const struct PingData * pd = PingData + pingHostId;
 
 	double totaltime = 0;
 	int totalcountok = 0;
@@ -441,11 +444,11 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int num )
 	double stddev = 0;
 	double last = -1;
 	double loss = 100.00;
-	double windmaxtime = GetWindMaxPingTime();
+	double windmaxtime = GetWindMaxPingTime( pd );
 
 	unsigned int assignedScreenHeight = screeny / count;
-	unsigned int heightOffset = assignedScreenHeight * num;
-	unsigned int heightOffsetBottom = assignedScreenHeight * (num+1);
+	unsigned int heightOffset = assignedScreenHeight * pingHostId;
+	unsigned int heightOffsetBottom = assignedScreenHeight * (pingHostId+1);
 
 	if (!GuiYscaleFactorIsConstant)
 	{
@@ -454,9 +457,9 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int num )
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
-		double st = PingSendTimes[index];
-		double rt = PingRecvTimes[index];
+		int index = ((pd->current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		double st = pd->PingSendTimes[index];
+		double rt = pd->PingRecvTimes[index];
 
 		double dt = 0;
 
@@ -496,9 +499,9 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int num )
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
-		double st = PingSendTimes[index];
-		double rt = PingRecvTimes[index];
+		int index = ((pd->current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		double st = pd->PingSendTimes[index];
+		double rt = pd->PingRecvTimes[index];
 
 		double dt = 0;
 		if( rt > st )
@@ -809,6 +812,9 @@ int main( int argc, const char ** argv )
 	CNFGSetupWMClass( title, 320, 155, "cnping", "cnping" );
 #endif
 
+	// allocate pingdata; calloc gurantees zero filled memory
+	PingData = calloc( pinghostListSize, sizeof(struct PingData) );
+
 	// iterate over all ping hosts and create ping threads for them
 	unsigned int pingHostId = 0;
 	struct PingHost * current = pinghostList;
@@ -816,7 +822,7 @@ int main( int argc, const char ** argv )
 	{
 		if( memcmp( current->host, "http://", 7 ) == 0 )
 		{
-			StartHTTPing( current->host+7, pingperiodseconds, device );
+			StartHTTPing( current->host+7, pingperiodseconds, device, pingHostId );
 		}
 		else
 		{
@@ -836,15 +842,15 @@ int main( int argc, const char ** argv )
 			}
 
 			ping_setup( current->host, device );
-			OGCreateThread( PingSend, 0 );
-			OGCreateThread( PingListen, 0 );
+			OGCreateThread( PingSend, (void *) pingHostId );
+			OGCreateThread( PingListen, (void *) pingHostId );
 		}
 
 		pingHostId++;
 	}
 
 
-	frameperiodseconds = fmin(.2, fmax(.03, pingperiodseconds));
+	frameperiodseconds = fmin(.2, fmax(.03, pingperiodseconds) );
 
 	while(1)
 	{
@@ -896,6 +902,7 @@ int main( int argc, const char ** argv )
 	}
 
 	freePingHostList( &pinghostList, &pinghostListSize );
+	free( PingData );
 
 	return(0);
 }
