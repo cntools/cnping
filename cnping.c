@@ -54,6 +54,13 @@
 			do { if (0) fprintf(stderr, __VA_ARGS__); } while (0);
 #endif
 
+
+// linked list of hosts to ping
+struct PingHost {
+	const char * host;
+	struct PingHost* next;
+};
+
 unsigned frames = 0;
 unsigned long iframeno = 0;
 short screenx, screeny;
@@ -269,21 +276,21 @@ double GetWindMaxPingTime( void )
 	return maxtime;
 }
 
-void DrawMainText( const char * stbuf )
+void DrawMainText( const char * stbuf, unsigned int yOffset )
 {
 	int x, y;
 	CNFGColor( 0x000000ff );
 	for( x = -1; x < 2; x++ ) for( y = -1; y < 2; y++ )
 	{
-		CNFGPenX = 10+x; CNFGPenY = 10+y;
+		CNFGPenX = 10+x; CNFGPenY = 10+y + yOffset;
 		CNFGDrawText( stbuf, 2 );
 	}
 	CNFGColor( 0xffffffff );
-	CNFGPenX = 10; CNFGPenY = 10;
+	CNFGPenX = 10; CNFGPenY = 10 + yOffset;
 	CNFGDrawText( stbuf, 2 );
 }
 
-void DrawFrameHistogram( const char * pinghost )
+void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int num )
 {
 	int i;
 //	double Now = OGGetAbsoluteTime();
@@ -292,6 +299,9 @@ void DrawFrameHistogram( const char * pinghost )
 	int maxpingslot = ( globmaxtime*10000.0 );
 	int minpingslot = ( globmintime*10000.0 );
 	int slots = maxpingslot-minpingslot;
+
+	unsigned int assignedScreenHeight = screeny / count;
+	unsigned int heightOffset = assignedScreenHeight * num;
 
 	if( categories <= 2 )
 	{
@@ -349,7 +359,7 @@ void DrawFrameHistogram( const char * pinghost )
 			CNFGColor( 0x33cc33ff );
 			int top = 30;
 			uint64_t samps = samples[i];
-			int bottom = screeny - 50;
+			int bottom = assignedScreenHeight - 50;
 			int height = samps?(samps * (bottom-top) / highestchart + 1):0;
 			int startx = (i+1) * (screenx-50) / rslots;
 			int endx = (i+2) * (screenx-50) / rslots;
@@ -388,7 +398,7 @@ void DrawFrameHistogram( const char * pinghost )
 			}
 
 
-			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+3;
+			CNFGPenX = startx + (8-log10) * 4; CNFGPenY = bottom+heightOffset+3;
 #ifdef WIN32
 			sprintf( stbuf, "%I64u", samps );
 #else
@@ -396,7 +406,7 @@ void DrawFrameHistogram( const char * pinghost )
 #endif
 			CNFGDrawText( stbuf, 2 );
 
-			CNFGPenX = startx; CNFGPenY = bottom+14;
+			CNFGPenX = startx; CNFGPenY = bottom+heightOffset+14;
 			sprintf( stbuf, "%5.1fms\n%5.1fms", ssmsMIN[i]/10.0, ssmsMAX[i]/10.0 );
 			CNFGDrawText( stbuf, 2 );
 		}
@@ -408,16 +418,16 @@ void DrawFrameHistogram( const char * pinghost )
 #endif
 			pinghost, globmaxtime*1000.0, globinterval*1000.0, globallost, globalrx, globallost*100.0/(globalrx+globallost) );
 		if( !in_frame_mode )
-			DrawMainText( stt );
+			DrawMainText( stt, heightOffset );
 		return;
 	}
 nodata:
-	DrawMainText( "No data.\n" );
+	DrawMainText( "No data.\n", heightOffset );
 	return;
 }
 
 
-void DrawFrame( const char * pinghost )
+void DrawFrame( const char * pinghost, unsigned int count, unsigned int num )
 {
 	int i;
 
@@ -432,6 +442,15 @@ void DrawFrame( const char * pinghost )
 	double last = -1;
 	double loss = 100.00;
 	double windmaxtime = GetWindMaxPingTime();
+
+	unsigned int assignedScreenHeight = screeny / count;
+	unsigned int heightOffset = assignedScreenHeight * num;
+	unsigned int heightOffsetBottom = assignedScreenHeight * (num+1);
+
+	if (!GuiYscaleFactorIsConstant)
+	{
+		GuiYScaleFactor = (assignedScreenHeight - 50) / windmaxtime;
+	}
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -466,15 +485,10 @@ void DrawFrame( const char * pinghost )
 			dt = 99 * 1000; // assume 99s to fill screen black
 		}
 
-		if (!GuiYscaleFactorIsConstant)
-		{
-			GuiYScaleFactor =  (screeny - 50) / windmaxtime;
-		}
-
 		int h = dt*GuiYScaleFactor;
-		int top = screeny - h;
+		int top = assignedScreenHeight - h;
 		if( top < 0 ) top = 0;
-		CNFGTackSegment( i, screeny-1, i, top );
+		CNFGTackSegment( i, heightOffset+assignedScreenHeight-1, i, heightOffset+top );
 	}
 
 	double avg = totaltime / totalcountok;
@@ -502,20 +516,21 @@ void DrawFrame( const char * pinghost )
 	int avg_gui    = avg*GuiYScaleFactor;
 	int stddev_gui = stddev*GuiYScaleFactor;
 
+
 	CNFGColor( 0x00ff00ff );
 
-
+	// the 3 green lines
 	int l = avg_gui;
-	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
+	CNFGTackSegment( 0, heightOffsetBottom-l, screenx, heightOffsetBottom - l );
 	l = (avg_gui) + (stddev_gui);
-	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
+	CNFGTackSegment( 0, heightOffsetBottom-l, screenx, heightOffsetBottom - l );
 	l = (avg_gui) - (stddev_gui);
-	CNFGTackSegment( 0, screeny-l, screenx, screeny - l );
+	CNFGTackSegment( 0, heightOffsetBottom-l, screenx, heightOffsetBottom - l );
 
 	char stbuf[2048];
 	char * sptr = &stbuf[0];
 
-	sptr += sprintf( sptr, 
+	sptr += sprintf( sptr,
 		"Last:%6.2f ms    Host: %s\n"
 		"Min :%6.2f ms\n"
 		"Max :%6.2f ms    Historical max:   %5.2f ms\n"
@@ -528,7 +543,7 @@ void DrawFrame( const char * pinghost )
 		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
 		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), loss );
 
-	DrawMainText( stbuf );
+	DrawMainText( stbuf, heightOffset );
 	OGUSleep( 1000 );
 }
 
@@ -640,6 +655,29 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 	return 0;
 }
 #endif
+
+void prependPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue )
+{
+	struct PingHost* newEntry = malloc( sizeof(struct PingHost) );
+	newEntry->host = newEntryValue;
+	newEntry->next = *list;
+	*list = newEntry;
+	(*listSize) ++;
+}
+
+void freePingHostList( struct PingHost ** list, unsigned int * listSize )
+{
+	struct PingHost * current = *list;
+	while( current )
+	{
+		struct PingHost * next = current->next;
+		free( current );
+		current = next;
+	}
+	*list = NULL;
+	*listSize = 0;
+}
+
 int main( int argc, const char ** argv )
 {
 	char title[1024];
@@ -650,7 +688,8 @@ int main( int argc, const char ** argv )
 	double SecToWait;
 	double frameperiodseconds;
 	const char * device = NULL;
-	const char * pinghost = NULL;
+	struct PingHost * pinghostList = NULL;
+	unsigned int pinghostListSize = 0;
 
 #ifdef WIN32
 	ShowWindow (GetConsoleWindow(), SW_HIDE);
@@ -697,7 +736,7 @@ int main( int argc, const char ** argv )
 			//Parameter-based field.
 			switch( thisargv[1] )
 			{
-				case 'h': pinghost = nextargv; break;
+				case 'h': prependPingHost( &pinghostList, &pinghostListSize, nextargv ); break;
 				case 'p': pingperiodseconds = atof( nextargv ); break;
 				case 's': ExtraPingSize = atoi( nextargv ); break;
 				case 'y': GuiYScaleFactor = atof( nextargv ); break;
@@ -712,7 +751,7 @@ int main( int argc, const char ** argv )
 			//Unmarked fields
 			switch( argcunmarked++ )
 			{
-				case 1: pinghost = thisargv; break;
+				case 1: prependPingHost( &pinghostList, &pinghostListSize, thisargv ); break;
 				case 2: pingperiodseconds = atof( thisargv ); break;
 				case 3: ExtraPingSize = atoi( thisargv ); break;
 				case 4: GuiYScaleFactor = atof( thisargv ); break;
@@ -722,17 +761,12 @@ int main( int argc, const char ** argv )
 		}
 	}
 
-	if( title[0] == 0 )
-	{
-		sprintf( title, "%s - cnping "VERSION, pinghost );
-	}
-
 	if( GuiYScaleFactor > 0 )
 	{
 		GuiYscaleFactorIsConstant = 1;
 	}
 
-	if( !pinghost )
+	if( !pinghostList )
 	{
 		displayhelp = 1;
 	}
@@ -746,47 +780,67 @@ int main( int argc, const char ** argv )
 			"   (-y) [const y-axis scaling] -- use a fixed scaling factor instead of auto scaling (optional)\n"
 			"   (-t) [window title]         -- the title of the window (optional)\n"
 			"   (-I) [interface]            -- Sets source interface (i.e. eth0)\n");
+
+		freePingHostList( &pinghostList, &pinghostListSize );
 		return -1;
+	}
+
+	if( title[0] == 0 )
+	{
+		sprintf( title, "%s - cnping "VERSION, pinghostList->host );
 	}
 
 #if defined( WIN32 ) || defined( WINDOWS )
 	if(device)
 	{
 		ERRM("Error: Device option is not implemented on your platform. PRs welcome.\n");
+		freePingHostList( &pinghostList, &pinghostListSize );
 		exit( -1 );
 	}
 	
 	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
 	{
 		ERRM( "Fault in WSAStartup\n" );
+		freePingHostList( &pinghostList, &pinghostListSize );
 		exit( -2 );
 	}
 	CNFGSetup( title, 320, 155 );
 #else
 	CNFGSetupWMClass( title, 320, 155, "cnping", "cnping" );
 #endif
- 
 
-	if( memcmp( pinghost, "http://", 7 ) == 0 )
+	// iterate over all ping hosts and create ping threads for them
+	unsigned int pingHostId = 0;
+	struct PingHost * current = pinghostList;
+	for ( ; current ; current = current->next )
 	{
-		StartHTTPing( pinghost+7, pingperiodseconds, device );
-	}
-	else
-	{
-		char* protoEnd = strstr( pinghost, "://" );
-		if ( protoEnd )
+		if( memcmp( current->host, "http://", 7 ) == 0 )
 		{
-			int protoSize = protoEnd - pinghost;
-			char protoBuffer[protoSize + 1];
-			memcpy( protoBuffer, pinghost, protoSize );
-			protoBuffer[protoSize] = '\0';
-			ERRM( "Protocol \"%s\" is not supported\n", protoBuffer );
-			exit( -1 );
+			StartHTTPing( current->host+7, pingperiodseconds, device );
+		}
+		else
+		{
+			char* protoEnd = strstr( current->host, "://" );
+			if ( protoEnd )
+			{
+				int protoSize = protoEnd - current->host;
+				char protoBuffer[protoSize + 1];
+				memcpy( protoBuffer, current->host, protoSize );
+				protoBuffer[protoSize] = '\0';
+				ERRM( "Protocol \"%s\" is not supported\n", protoBuffer );
+
+				// could this lead to a crash? another thread might already access memory from the list
+				freePingHostList( &pinghostList, &pinghostListSize );
+
+				exit( -1 );
+			}
+
+			ping_setup( current->host, device );
+			OGCreateThread( PingSend, 0 );
+			OGCreateThread( PingListen, 0 );
 		}
 
-		ping_setup( pinghost, device );
-		OGCreateThread( PingSend, 0 );
-		OGCreateThread( PingListen, 0 );
+		pingHostId++;
 	}
 
 
@@ -801,14 +855,22 @@ int main( int argc, const char ** argv )
 		CNFGColor( 0xffffffff );
 		CNFGGetDimensions( &screenx, &screeny );
 
-		if( in_frame_mode )
+		// iterate over all ping hosts and create ping threads for them
+		unsigned int pingHostId = 0;
+		struct PingHost * current = pinghostList;
+		for ( ; current ; current = current->next )
 		{
-			DrawFrame( pinghost );
-		}
+			if( in_frame_mode )
+			{
+				DrawFrame( current->host, pinghostListSize, pingHostId );
+			}
 
-		if( in_histogram_mode )
-		{
-			DrawFrameHistogram( pinghost );
+			if( in_histogram_mode )
+			{
+				DrawFrameHistogram( current->host, pinghostListSize, pingHostId );
+			}
+
+			pingHostId++;
 		}
 
 		CNFGPenX = 100; CNFGPenY = 100;
@@ -832,6 +894,8 @@ int main( int argc, const char ** argv )
 		if( SecToWait > 0 )
 			OGUSleep( (int)( SecToWait * 1000000 ) );
 	}
+
+	freePingHostList( &pinghostList, &pinghostListSize );
 
 	return(0);
 }
