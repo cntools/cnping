@@ -807,9 +807,9 @@ int main( int argc, const char ** argv )
 		freePingHostList( &pinghostList, &pinghostListSize );
 		exit( -2 );
 	}
-	CNFGSetup( title, 320, 155 );
+	CNFGSetup( title, 320, 155 * pinghostListSize );
 #else
-	CNFGSetupWMClass( title, 320, 155, "cnping", "cnping" );
+	CNFGSetupWMClass( title, 320, 155 * pinghostListSize, "cnping", "cnping" );
 #endif
 
 	// allocate pingdata; calloc gurantees zero filled memory
