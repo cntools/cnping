@@ -22,19 +22,15 @@ jobs:
            libx11-dev \
            libxext-dev \
            libxinerama-dev \
-           mesa-common-dev
-           # Would be nice if we could pull those directly from debian/control
-    - name: Install more dependencies
-      run: |
-        sudo apt-get install -y \
-          make \
-          build-essential \
-          binutils-mingw-w64-i686 \
-          gcc-mingw-w64-i686 \
-          g++-mingw-w64-i686 \
-          devscripts \
-          appstream \
-          desktop-file-utils
+           mesa-common-dev \
+           make \
+           build-essential \
+           binutils-mingw-w64-i686 \
+           gcc-mingw-w64-i686 \
+           g++-mingw-w64-i686 \
+           devscripts \
+           appstream \
+           desktop-file-utils
 
     - name: Build
       run: make cnping cnping.exe
