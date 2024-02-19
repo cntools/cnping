@@ -3,6 +3,7 @@ name: Build cnping
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   Build-for-Linux:
