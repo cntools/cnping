@@ -190,20 +190,19 @@ int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData * pd )
 
 void * PingListen( void * r )
 {
-	unsigned int pingHostId = (unsigned int) r;
-	listener( pingHostId );
+	struct PreparedPing* pp = (struct PreparedPing*) r;
+	listener( pp );
 	ERRM( "Fault on listen.\n" );
 	exit( -2 );
 }
 
-void * PingSend( void * r )
+void * PingSend( void* r )
 {
-	unsigned int pingHostId = (unsigned int) r;
-	do_pinger( pingHostId );
+	struct PreparedPing* pp = (struct PreparedPing*) r;
+	ping( pp );
 	ERRM( "Fault on ping.\n" );
 	exit( -1 );
 }
-
 
 void HandleKey( int keycode, int bDown )
 {
@@ -296,7 +295,6 @@ void DrawMainText( const char * stbuf, unsigned int yOffset )
 void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int pingHostId )
 {
 	int i;
-//	double Now = OGGetAbsoluteTime();
 	const struct PingData * pd = PingData + pingHostId;
 	const int colwid = 50;
 	int categories = (screenx-50)/colwid;
@@ -821,6 +819,7 @@ int main( int argc, const char ** argv )
 	{
 		PingData[i].globmaxtime = 0;
 		PingData[i].globmintime = 1e20;
+		PingData[i].pp = NULL;
 	}
 
 	// iterate over all ping hosts and create ping threads for them
@@ -849,9 +848,14 @@ int main( int argc, const char ** argv )
 				exit( -1 );
 			}
 
-			ping_setup( current->host, device );
-			OGCreateThread( PingSend, (void *) pingHostId );
-			OGCreateThread( PingListen, (void *) pingHostId );
+			struct PreparedPing* pp = ping_setup( current->host, device );
+			if (pp)
+			{
+				pp->pingHostId = pingHostId;
+				OGCreateThread( PingSend, pp );
+				OGCreateThread( PingListen, pp );
+				PingData[pingHostId].pp = pp;
+			}
 		}
 
 		pingHostId++;
@@ -910,6 +914,14 @@ int main( int argc, const char ** argv )
 	}
 
 	freePingHostList( &pinghostList, &pinghostListSize );
+
+	for( int pingHostId = 0; pingHostId < pinghostListSize; ++pingHostId)
+	{
+		if(PingData[pingHostId].pp)
+		{
+			free(PingData[pingHostId].pp);
+		}
+	}
 	free( PingData );
 
 	return(0);
