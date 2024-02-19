@@ -8,9 +8,19 @@
 #else
 	#include <sys/socket.h>
 #endif
+#include <netinet/in.h>
 
 // ping data of one host
 #define PINGCYCLEWIDTH 8192
+
+struct PreparedPing
+{
+	int fd;
+	int pingHostId;
+	struct sockaddr_in6 psaddr;
+	socklen_t psaddr_len;
+};
+
 struct PingData
 {
 	double PingSendTimes [PINGCYCLEWIDTH];
@@ -20,6 +30,7 @@ struct PingData
 	double globinterval, globlast;
 	uint64_t globalrx;
 	uint64_t globallost;
+	struct PreparedPing* pp;
 };
 
 extern struct PingData * PingData;
@@ -33,17 +44,15 @@ void display( uint8_t *buf, int bytes, unsigned int pingHostId );
 //return value = # of bytes to send in ping message.
 int load_ping_packet( uint8_t  * buffer, int buffersize, struct PingData * pd );
 
-void listener( unsigned int pingHostId );
-void ping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len );
-void do_pinger( );
+void listener( struct PreparedPing* pp );
+void ping( struct PreparedPing* pp );
 
-void singleping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len ); // If using this, must call ping_setup( 0, 0); to begin.
+void singleping( struct PreparedPing* pp ); // If using this, must call ping_setup( 0, 0); to begin.
 
 //If pingperiodseconds = -1, run ping/do_pinger once and exit.
 extern float pingperiodseconds;
-extern int precise_ping; //if 0, use minimal CPU, but ping send-outs are only approximate, if 1, spinlock until precise time for ping is hit.
 extern int ping_failed_to_send;
-void ping_setup(const char * strhost, const char * device);
+struct PreparedPing* ping_setup(const char * strhost, const char * device);
 
 
 #endif
