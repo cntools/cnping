@@ -49,18 +49,24 @@ int using_regular_ping;
 static og_sema_t s_disp;
 static og_sema_t s_ping;
 
-void ping_setup(const char * strhost, const char * device)
+struct PreparedPing* ping_setup(const char * strhost, const char * device)
 {
+	struct PreparedPing* pp = (struct PreparedPing*) malloc(sizeof(struct PreparedPing));
+
+	memset(&pp->psaddr, 0, sizeof(pp->psaddr));
+	pp->psaddr_len = sizeof(pp->psaddr);
+
 	// resolve host
-	psaddr_len = sizeof(psaddr);
 	if( strhost )
-		resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
+		resolveName((struct sockaddr*) &pp->psaddr, &pp->psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
 	else
-		psaddr.sin6_family = AF_INET;
+		pp->psaddr.sin6_family = AF_INET;
 
 	s_disp = OGCreateSema();
 	s_ping = OGCreateSema();
 	//This function is executed first.
+
+	return pp;
 }
 
 void listener( struct PreparedPing* pp )
@@ -125,13 +131,11 @@ static void * pingerthread( void * v )
 	return 0;
 }
 
-void singleping(unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
+void singleping( struct PreparedPing* pp )
 {
 	int i;
-	(void) addr;
-	(void) addr_len;
 
-	if( psaddr.sin6_family != AF_INET )
+	if( pp->psaddr.sin6_family != AF_INET )
 	{
 		// ipv6 ICMP Ping is not supported on windows
 		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
@@ -162,15 +166,13 @@ void singleping(unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_l
 	OGUnlockSema( s_ping );
 }
 
-void ping( unsigned int pingHostId, struct sockaddr *addr, socklen_t addr_len )
+void ping( struct PreparedPing* pp )
 {
 	int i;
-	(void) addr;
-	(void) addr_len;
 
 	using_regular_ping = 1;
 
-	if( psaddr.sin6_family != AF_INET )
+	if( pp->psaddr.sin6_family != AF_INET )
 	{
 		// ipv6 ICMP Ping is not supported on windows
 		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
@@ -296,6 +298,8 @@ uint16_t checksum( const unsigned char * start, uint16_t len )
 	return ~csum;
 }
 
+
+#ifndef WIN32
 // setsockopt TTL to 255
 void setTTL( int sock, int family )
 {
@@ -309,6 +313,7 @@ void setTTL( int sock, int family )
 		exit( -1 );
 	}
 }
+#endif
 
 void setNoBlock( int sock )
 {
@@ -383,9 +388,11 @@ void listener( struct PreparedPing* pp )
 		fda[0].events = POLLIN;
 		WSAPoll(fda, 1, 10);
 #endif
-		keep_retry_quick:
 
-		int bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
+		int bytes;
+
+keep_retry_quick:
+		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
 		if( !isICMPResponse( pp->psaddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
@@ -484,7 +491,7 @@ void ping( struct PreparedPing* pp )
 	{
 		int rsize = constructPack(&pckt, pp->psaddr.sin6_family, pp->pingHostId, cnt++);
 
-		int sr = sendto(pp->fd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
+		int sr = sendto(pp->fd, (char*) &pckt, sizeof( pckt.hdr ) + rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
 
 		if( sr <= 0 )
 		{

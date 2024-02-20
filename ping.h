@@ -5,10 +5,19 @@
 #ifdef WIN32
 	typedef int socklen_t;
 	struct sockaddr;
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
+
+	// ipv6 icmp ping is not supported on windows anyways
+	// this is just needed so it compiles
+	#define ICMP6_ECHO_REQUEST 128
+	#define ICMP6_ECHO_REPLY 129
+
+	#define ICMP_ECHOREPLY ICMP_ECHO
 #else
 	#include <sys/socket.h>
+	#include <netinet/in.h>
 #endif
-#include <netinet/in.h>
 
 // ping data of one host
 #define PINGCYCLEWIDTH 8192
