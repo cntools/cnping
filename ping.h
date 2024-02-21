@@ -24,12 +24,19 @@
 
 struct PreparedPing
 {
+	// socket for sending the pings
 	int fd;
+
+	// the number of this host -> used to access the PingData array
 	int pingHostId;
+
+	// address to send the pings to
 	struct sockaddr_in6 psaddr;
+	// size of psaddr
 	socklen_t psaddr_len;
 };
 
+// meassured ping data of one host. This is the meassured data cnping displays
 struct PingData
 {
 	double PingSendTimes [PINGCYCLEWIDTH];
@@ -39,9 +46,13 @@ struct PingData
 	double globinterval, globlast;
 	uint64_t globalrx;
 	uint64_t globallost;
+
+	// pointer to the related prepared ping so it can be freed at exit
 	struct PreparedPing* pp;
 };
 
+// captured ping data - This is an array that get allocated with the size of pinghostListSize
+// each Ping thread should use pingHostId as offset into this array
 extern struct PingData * PingData;
 
 unsigned short checksum(const unsigned char *b, uint16_t len);
@@ -61,6 +72,8 @@ void singleping( struct PreparedPing* pp ); // If using this, must call ping_set
 //If pingperiodseconds = -1, run ping/do_pinger once and exit.
 extern float pingperiodseconds;
 extern int ping_failed_to_send;
+
+// resolvs the hostname and prepares the socket. Might return NULL on error
 struct PreparedPing* ping_setup(const char * strhost, const char * device);
 
 
