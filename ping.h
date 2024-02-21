@@ -57,6 +57,8 @@ extern struct PingData * PingData;
 
 unsigned short checksum(const unsigned char *b, uint16_t len);
 
+int createSocket( int family );
+
 //Callback (when received)
 void display( uint8_t *buf, int bytes, unsigned int pingHostId );
 
