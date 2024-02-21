@@ -76,4 +76,5 @@ updateicons : ${ICONSPATH}scalable/apps/${APPNAME}.svg
 	convert $^ -resize 48x48 ${ICONSPATH}48x48/apps/${APPNAME}.png
 	convert $^ -resize 256x256 ${ICONSPATH}256x256/apps/${APPNAME}.png
 	convert $^ -resize 1024x1024 ${ICONSPATH}1024x1024/apps/${APPNAME}.png
+	convert $^ -density 300 -define icon:auto-resize=256,128,96,64,48,32,16 -background none cnping.ico
 
