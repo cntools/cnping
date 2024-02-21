@@ -369,7 +369,7 @@ void listener( struct PreparedPing* pp )
 #ifndef WIN32
 	int sd = createSocket( pp->psaddr.sin6_family );
 
-	setTTL( sd, pp->psaddr.sin6_family );
+	setTTL( pp->fd, pp->psaddr.sin6_family );
 #endif
 
 	struct sockaddr_in6 recvFromAddr;
@@ -383,7 +383,7 @@ void listener( struct PreparedPing* pp )
 
 #ifdef WIN32
 		WSAPOLLFD fda[1];
-		fda[0].fd = sd;
+		fda[0].fd = pp->fd;
 		fda[0].events = POLLIN;
 		WSAPoll(fda, 1, 10);
 #endif
@@ -391,7 +391,7 @@ void listener( struct PreparedPing* pp )
 		int bytes;
 
 keep_retry_quick:
-		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
+		bytes = recvfrom( pp->fd, (void*) buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
 		if( !isICMPResponse( pp->psaddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
@@ -545,6 +545,7 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 
 	memset(&pp->psaddr, 0, sizeof(pp->psaddr));
 	pp->psaddr_len = sizeof(pp->psaddr);
+	pp->psaddr.sin6_family = AF_INET;
 
 #ifdef WIN32
 	pp->fd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
@@ -560,10 +561,6 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 	if( strhost )
 	{
 		resolveName((struct sockaddr*) &pp->psaddr, &pp->psaddr_len, strhost, AF_UNSPEC);
-	}
-	else
-	{
-		pp->psaddr.sin6_family = AF_INET;
 	}
 
 	pp->fd = createSocket( pp->psaddr.sin6_family );
