@@ -36,6 +36,12 @@ int using_regular_ping;
 
 #include "rawdraw/os_generic.h"
 
+// used to pack arguments for windows ping threads
+struct WindowsPingArgs
+{
+	struct PreparedPing* pp;
+	HANDLE icmpHandle;
+};
 
 
 #define MAX_PING_SIZE 16384
@@ -84,19 +90,21 @@ void listener( struct PreparedPing* pp )
 	return;
 }
 
-static HANDLE pinghandles[PINGTHREADS];
-
 static void * pingerthread( void * v )
 {
 	uint8_t ping_payload[MAX_PING_SIZE];
 
-	HANDLE ih = *((HANDLE*)v);
+	// copy arguments and free struct
+	struct WindowsPingArgs* args = (struct WindowsPingArgs*) v;
+	struct PreparedPing* pp = args->pp;
+	HANDLE ih = args->icmpHandle;
+	free(args);
 
 	int timeout_ms = pingperiodseconds * (PINGTHREADS-1) * 1000;
 	while(1)
 	{
 		OGLockSema( s_ping );
-		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ) );
+		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ), PingData + pp->pingHostId );
 		struct repl_t
 		{
 			ICMP_ECHO_REPLY rply;
@@ -104,7 +112,7 @@ static void * pingerthread( void * v )
 		} repl;
 
 		DWORD res = IcmpSendEcho( ih,
-			((struct sockaddr_in*) &psaddr)->sin_addr.s_addr, ping_payload, rl,
+			((struct sockaddr_in*) &pp->psaddr)->sin_addr.s_addr, ping_payload, rl,
 			0, &repl, sizeof( repl ),
 			timeout_ms );
 		int err;
@@ -124,7 +132,7 @@ static void * pingerthread( void * v )
 		}
 		if( res )
 		{
-			display( repl.rply.Data, rl );
+			display( repl.rply.Data, rl, pp->pingHostId );
 		}
 		OGUnlockSema( s_disp );
 	}
@@ -149,14 +157,17 @@ void singleping( struct PreparedPing* pp )
 		//Launch pinger threads
 		for( i = 0; i < PINGTHREADS; i++ )
 		{
-			HANDLE ih = pinghandles[i] = IcmpCreateFile();
+			HANDLE ih = IcmpCreateFile();
 			if( ih == INVALID_HANDLE_VALUE )
 			{
 				ERRM( "Cannot create ICMP thread %d\n", i );
 				exit( 0 );
 			}
 
-			OGCreateThread( pingerthread, &pinghandles[i] );
+			struct WindowsPingArgs* args = (struct WindowsPingArgs*) malloc(sizeof(struct WindowsPingArgs));
+			args->pp = pp;
+			args->icmpHandle = ih;
+			OGCreateThread( pingerthread, args );
 		}
 	}
 	//This function is executed as a thread after setup.
@@ -182,14 +193,17 @@ void ping( struct PreparedPing* pp )
 	//Launch pinger threads
 	for( i = 0; i < PINGTHREADS; i++ )
 	{
-		HANDLE ih = pinghandles[i] = IcmpCreateFile();
+		HANDLE ih = IcmpCreateFile();
 		if( ih == INVALID_HANDLE_VALUE )
 		{
 			ERRM( "Cannot create ICMP thread %d\n", i );
 			exit( 0 );
 		}
 
-		OGCreateThread( pingerthread, &pinghandles[i] );
+		struct WindowsPingArgs* args = (struct WindowsPingArgs*) malloc(sizeof(struct WindowsPingArgs));
+		args->pp = pp;
+		args->icmpHandle = ih;
+		OGCreateThread( pingerthread, args );
 	}
 	//This function is executed as a thread after setup.
 

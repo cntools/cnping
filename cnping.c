@@ -62,8 +62,6 @@ struct PingHost
 	struct PingHost* next;
 };
 
-unsigned frames = 0;
-unsigned long iframeno = 0;
 short screenx, screeny;
 float GuiYScaleFactor;
 int GuiYscaleFactorIsConstant;
@@ -76,6 +74,8 @@ uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 #define BUTTON_Y 16
 
 struct PingData * PingData = NULL;
+
+// count of hosts to ping - represents size of PingData and number of elements in pinghostList
 unsigned int pinghostListSize = 0;
 
 
@@ -718,6 +718,8 @@ int main( int argc, const char ** argv )
 	double SecToWait;
 	double frameperiodseconds;
 	const char * device = NULL;
+
+	// linked list of all hosts that should be pinged
 	struct PingHost * pinghostList = NULL;
 	pinghostListSize = 0;
 
@@ -890,6 +892,8 @@ int main( int argc, const char ** argv )
 
 	frameperiodseconds = fmin(.2, fmax(.03, pingperiodseconds) );
 
+	unsigned frames = 0;
+	unsigned long iframeno = 0;
 	while(1)
 	{
 		iframeno++;
