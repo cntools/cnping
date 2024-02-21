@@ -139,59 +139,10 @@ static void * pingerthread( void * v )
 	return 0;
 }
 
-void singleping( struct PreparedPing* pp )
+// create PINGTHREADS amount of pingerthread
+void createThreads( struct PreparedPing* pp )
 {
-	int i;
-
-	if( pp->psaddr.sin6_family != AF_INET )
-	{
-		// ipv6 ICMP Ping is not supported on windows
-		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
-		exit( -1 );
-	}
-
-	static int did_init_threads = 0;
-	if( !did_init_threads )
-	{
-		did_init_threads = 1;
-		//Launch pinger threads
-		for( i = 0; i < PINGTHREADS; i++ )
-		{
-			HANDLE ih = IcmpCreateFile();
-			if( ih == INVALID_HANDLE_VALUE )
-			{
-				ERRM( "Cannot create ICMP thread %d\n", i );
-				exit( 0 );
-			}
-
-			struct WindowsPingArgs* args = (struct WindowsPingArgs*) malloc(sizeof(struct WindowsPingArgs));
-			args->pp = pp;
-			args->icmpHandle = ih;
-			OGCreateThread( pingerthread, args );
-		}
-	}
-	//This function is executed as a thread after setup.
-
-	if( i >= PINGTHREADS-1 ) i = 0;
-	else i++;
-	OGUnlockSema( s_ping );
-}
-
-void ping( struct PreparedPing* pp )
-{
-	int i;
-
-	using_regular_ping = 1;
-
-	if( pp->psaddr.sin6_family != AF_INET )
-	{
-		// ipv6 ICMP Ping is not supported on windows
-		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
-		exit( -1 );
-	}
-
-	//Launch pinger threads
-	for( i = 0; i < PINGTHREADS; i++ )
+	for( int i = 0; i < PINGTHREADS; i++ )
 	{
 		HANDLE ih = IcmpCreateFile();
 		if( ih == INVALID_HANDLE_VALUE )
@@ -205,17 +156,52 @@ void ping( struct PreparedPing* pp )
 		args->icmpHandle = ih;
 		OGCreateThread( pingerthread, args );
 	}
+}
+
+// ipv6 ping is not supported on windows -> exit if ipv6 is required
+void checkIPv6( int family )
+{
+	if( family != AF_INET )
+	{
+		// ipv6 ICMP Ping is not implemented on windows - PRs welcome
+		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
+		exit( -1 );
+	}
+}
+
+void singleping( struct PreparedPing* pp )
+{
+	checkIPv6( pp->psaddr.sin6_family );
+
+	static int did_init_threads = 0;
+	if( !did_init_threads )
+	{
+		did_init_threads = 1;
+		//Launch pinger threads
+		createThreads( pp );
+	}
+	//This function is executed as a thread after setup.
+
+	OGUnlockSema( s_ping );
+}
+
+void ping( struct PreparedPing* pp )
+{
+	using_regular_ping = 1;
+
+	checkIPv6( pp->psaddr.sin6_family );
+
+	//Launch pinger threads
+	createThreads( pp );
+
 	//This function is executed as a thread after setup.
 
 	while(1)
 	{
-		if( i >= PINGTHREADS-1 ) i = 0;
-		else i++;
 		OGUnlockSema( s_ping );
 		OGUSleep( (int)(pingperiodseconds * 1000000) );
 	}
 }
-
 
 
 #else // ! WIN_USE_NO_ADMIN_PING
@@ -294,7 +280,6 @@ struct packet
 #endif
 };
 
-int sd;
 int pid=-1;
 
 uint16_t checksum( const unsigned char * start, uint16_t len )
