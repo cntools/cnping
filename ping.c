@@ -298,11 +298,19 @@ uint16_t checksum( const unsigned char * start, uint16_t len )
 }
 
 
-#ifndef WIN32
+#ifdef WIN32
+void setTTL( int sock, int family )
+{
+	(void) sock;
+	(void) family;
+	// nop on win
+}
+
+#else
 // setsockopt TTL to 255
 void setTTL( int sock, int family )
 {
-	const int val=255;
+	static const int val=255;
 
 	assert(family == AF_INET || family == AF_INET6);
 
@@ -328,6 +336,25 @@ void setNoBlock( int sock )
 #endif
 }
 
+// returns 1 = success; 0 = failed
+int bindDevice( int sock, const char* device )
+{
+#ifdef WIN32
+	(void) sock;
+	(void) device;
+
+#else
+	if(device)
+	{
+		if( setsockopt( sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1 ) != 0 )
+		{
+			return 0;
+		}
+	}
+#endif
+	return 1;
+}
+
 // 0 = failed, 1 = this is a ICMP Response
 int isICMPResponse( int family, unsigned char* buf, int bytes )
 {
@@ -351,6 +378,18 @@ int isICMPResponse( int family, unsigned char* buf, int bytes )
 
 int createSocket( int family )
 {
+#ifdef WIN32
+	// no ipv6 support for windows
+	int fd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
+	{
+		static const int lttl = 0xff;
+		if (setsockopt(fd, IPPROTO_IP, IP_TTL, (const char*)&lttl, sizeof(lttl)) == SOCKET_ERROR)
+		{
+			printf( "Warning: No IP_TTL.\n" );
+		}
+	}
+	return fd;
+#else
 	if( family == AF_INET )
 	{
 		return socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
@@ -362,14 +401,15 @@ int createSocket( int family )
 
 	// invalid af_family
 	return -1;
+#endif
 }
 
 void listener( struct PreparedPing* pp )
 {
-#ifndef WIN32
-	int sd = createSocket( pp->psaddr.sin6_family );
+	int listenSock = createSocket( pp->psaddr.sin6_family );
 
-	setTTL( pp->fd, pp->psaddr.sin6_family );
+#ifndef WIN32
+	setTTL( listenSock, pp->psaddr.sin6_family );
 #endif
 
 	struct sockaddr_in6 recvFromAddr;
@@ -383,7 +423,7 @@ void listener( struct PreparedPing* pp )
 
 #ifdef WIN32
 		WSAPOLLFD fda[1];
-		fda[0].fd = pp->fd;
+		fda[0].fd = listenSock;
 		fda[0].events = POLLIN;
 		WSAPoll(fda, 1, 10);
 #endif
@@ -391,7 +431,7 @@ void listener( struct PreparedPing* pp )
 		int bytes;
 
 keep_retry_quick:
-		bytes = recvfrom( pp->fd, (void*) buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
+		bytes = recvfrom( listenSock, (void*) buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
 		if( !isICMPResponse( pp->psaddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
@@ -531,32 +571,12 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 {
 	pid = getpid();
 
-#ifdef WIN32
-	WSADATA wsaData;
-	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
-	if( r )
-	{
-		ERRM( "Fault in WSAStartup\n" );
-		exit( -2 );
-	}
-#endif
-
 	struct PreparedPing* pp = (struct PreparedPing*) malloc(sizeof(struct PreparedPing));
 
 	memset(&pp->psaddr, 0, sizeof(pp->psaddr));
 	pp->psaddr_len = sizeof(pp->psaddr);
 	pp->psaddr.sin6_family = AF_INET;
 
-#ifdef WIN32
-	pp->fd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
-	{
-		int lttl = 0xff;
-		if (setsockopt(pp->fd, IPPROTO_IP, IP_TTL, (const char*)&lttl, sizeof(lttl)) == SOCKET_ERROR)
-		{
-			printf( "Warning: No IP_TTL.\n" );
-		}
-	}
-#else
 	// resolve host
 	if( strhost )
 	{
@@ -564,25 +584,20 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 	}
 
 	pp->fd = createSocket( pp->psaddr.sin6_family );
-
 	setTTL(pp->fd, pp->psaddr.sin6_family);
 
-	if(device)
-	{
-		if( setsockopt(pp->fd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
-		{
-			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
-			free(pp);
-			exit( -1 );
-		}
-	}
-
-#endif
 	if ( pp->fd < 0 )
 	{
 		ERRM("Error: Could not create raw socket\n");
 		free(pp);
-		exit(0);
+		exit( -2 );
+	}
+
+	if( 0 == bindDevice( pp->fd, device ) )
+	{
+		ERRM("Error: Failed to set Device option. Are you root? Or can do sock_raw sockets?\n");
+		free( pp );
+		exit( -1 );
 	}
 
 	return pp;
