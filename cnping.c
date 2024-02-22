@@ -33,6 +33,7 @@
 #include "ping.h"
 #include "error_handling.h"
 #include "httping.h"
+#include "pinghostlist.h"
 
 // #### Cross-plattform debugging ####
 // Windows does not print to Console, use DebugView from SysInternals to
@@ -54,13 +55,6 @@
 			do { if (0) fprintf(stderr, __VA_ARGS__); } while (0);
 #endif
 
-
-// linked list of hosts to ping
-struct PingHost
-{
-	const char * host;
-	struct PingHost* next;
-};
 
 short screenx, screeny;
 float GuiYScaleFactor;
@@ -660,28 +654,6 @@ INT_PTR CALLBACK TextEntry( HWND   hwndDlg, UINT   uMsg, WPARAM wParam, LPARAM l
 }
 #endif
 
-void prependPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue )
-{
-	struct PingHost* newEntry = malloc( sizeof(struct PingHost) );
-	newEntry->host = newEntryValue;
-	newEntry->next = *list;
-	*list = newEntry;
-	(*listSize) ++;
-}
-
-void freePingHostList( struct PingHost ** list, unsigned int * listSize )
-{
-	struct PingHost * current = *list;
-	while( current )
-	{
-		struct PingHost * next = current->next;
-		free( current );
-		current = next;
-	}
-	*list = NULL;
-	*listSize = 0;
-}
-
 int main( int argc, const char ** argv )
 {
 	char title[1024];
@@ -803,7 +775,7 @@ int main( int argc, const char ** argv )
 		freePingHostList( &pinghostList, &pinghostListSize );
 		exit( -1 );
 	}
-	
+
 	if( WSAStartup(MAKEWORD(2,2), &wsaData) )
 	{
 		ERRM( "Fault in WSAStartup\n" );
