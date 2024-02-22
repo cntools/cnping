@@ -282,6 +282,11 @@ struct packet
 
 int pid=-1;
 
+int min( int a, int b )
+{
+	return a < b ? a : b;
+}
+
 uint16_t checksum( const unsigned char * start, uint16_t len )
 {
 	uint16_t i;
@@ -360,10 +365,11 @@ int isICMPResponse( int family, unsigned char* buf, int bytes )
 {
 	assert( family == AF_INET || family == AF_INET6);
 
-	if( bytes == -1 ) return 0;
+	if( bytes < 1 ) return 0;
 
 	if( family == AF_INET ) // ipv4 compare
 	{
+		if( bytes < 21 ) return 0;
 		if( buf[9] != IPPROTO_ICMP ) return 0;
 		if( buf[20] !=  ICMP_ECHOREPLY ) return 0;
 
@@ -435,7 +441,7 @@ keep_retry_quick:
 		if( !isICMPResponse( pp->psaddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
-		if( using_regular_ping && memcmp(&recvFromAddr, &pp->psaddr, recvFromAddrLen) != 0 ) continue;
+		if( using_regular_ping && memcmp(&recvFromAddr, &pp->psaddr, min(recvFromAddrLen, pp->psaddr_len) ) != 0 ) continue;
 
 		// sizeof(packet.hdr) + 20
 		int offset = 0;
