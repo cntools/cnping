@@ -30,6 +30,7 @@ jobs:
            g++-mingw-w64-i686 \
            devscripts \
            appstream \
+           imagemagick \
            desktop-file-utils
 
     - name: Build
