@@ -52,9 +52,6 @@ struct WindowsPingArgs
 	#pragma comment(lib, "iphlpapi.lib")
 #endif
 
-static og_sema_t s_disp;
-static og_sema_t s_ping;
-
 struct PreparedPing* ping_setup(const char * strhost, const char * device)
 {
 	struct PreparedPing* pp = (struct PreparedPing*) malloc(sizeof(struct PreparedPing));
@@ -68,8 +65,8 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 	else
 		pp->psaddr.sin6_family = AF_INET;
 
-	s_disp = OGCreateSema();
-	s_ping = OGCreateSema();
+	pp->s_disp = OGCreateSema();
+	pp->s_ping = OGCreateSema();
 	//This function is executed first.
 
 	return pp;
@@ -81,7 +78,7 @@ void listener( struct PreparedPing* pp )
 	if( listth ) return;
 	listth = 1;
 
-	OGUnlockSema( s_disp );
+	OGUnlockSema( pp->s_disp );
 	//Normally needs to call display(buf + 28, bytes - 28 ); on successful ping.
 	//This function is executed as a thread after setup.
 	//Really, we just use the s_disp semaphore to make sure we only launch disp's at correct times.
@@ -103,7 +100,7 @@ static void * pingerthread( void * v )
 	int timeout_ms = pingperiodseconds * (PINGTHREADS-1) * 1000;
 	while(1)
 	{
-		OGLockSema( s_ping );
+		OGLockSema( pp->s_ping );
 		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ), PingData + pp->pingHostId );
 		struct repl_t
 		{
@@ -117,7 +114,7 @@ static void * pingerthread( void * v )
 			timeout_ms );
 		int err;
 		if( !res ) err = GetLastError();
-		OGLockSema( s_disp );
+		OGLockSema( pp->s_disp );
 
 		if( !res )
 		{
@@ -134,7 +131,7 @@ static void * pingerthread( void * v )
 		{
 			display( repl.rply.Data, rl, pp->pingHostId );
 		}
-		OGUnlockSema( s_disp );
+		OGUnlockSema( pp->s_disp );
 	}
 	return 0;
 }
@@ -182,7 +179,7 @@ void singleping( struct PreparedPing* pp )
 	}
 	//This function is executed as a thread after setup.
 
-	OGUnlockSema( s_ping );
+	OGUnlockSema( pp->s_ping );
 }
 
 void ping( struct PreparedPing* pp )
@@ -198,7 +195,7 @@ void ping( struct PreparedPing* pp )
 
 	while(1)
 	{
-		OGUnlockSema( s_ping );
+		OGUnlockSema( pp->s_ping );
 		OGUSleep( (int)(pingperiodseconds * 1000000) );
 	}
 }

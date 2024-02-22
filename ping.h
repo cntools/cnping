@@ -19,6 +19,10 @@
 	#include <netinet/in.h>
 #endif
 
+#ifdef WIN_USE_NO_ADMIN_PING
+	#include "rawdraw/os_generic.h"
+#endif
+
 // ping data of one host
 #define PINGCYCLEWIDTH 8192
 
@@ -34,6 +38,11 @@ struct PreparedPing
 	struct sockaddr_in6 psaddr;
 	// size of psaddr
 	socklen_t psaddr_len;
+
+#ifdef WIN_USE_NO_ADMIN_PING
+	og_sema_t s_disp;
+	og_sema_t s_ping;
+#endif
 };
 
 // meassured ping data of one host. This is the meassured data cnping displays
