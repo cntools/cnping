@@ -74,10 +74,6 @@ struct PreparedPing* ping_setup(const char * strhost, const char * device)
 
 void listener( struct PreparedPing* pp )
 {
-	static uint8_t listth;
-	if( listth ) return;
-	listth = 1;
-
 	OGUnlockSema( pp->s_disp );
 	//Normally needs to call display(buf + 28, bytes - 28 ); on successful ping.
 	//This function is executed as a thread after setup.
