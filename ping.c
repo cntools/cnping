@@ -17,7 +17,6 @@
 #include "tccheader.h"
 #endif
 
-int ping_failed_to_send;
 float pingperiodseconds;
 int precise_ping;
 int using_regular_ping;
@@ -465,12 +464,17 @@ keep_retry_quick:
 	exit( 0 );
 }
 
+// fill a packet with data ready to be written to a raw socket
+// returns the size of the packet
 int constructPack(struct packet* pckt, int family, int pingHostId, int cnt)
 {
 	int rsize = load_ping_packet( pckt->msg, sizeof( pckt->msg ), PingData + pingHostId );
 
-	// This needs to be here, but I don't know why, since I think the struct is fully populated.
-	memset( &pckt->hdr, 0, sizeof( pckt->hdr ) );
+	// add the size of the header
+	rsize += sizeof( pckt->hdr );
+
+	// checksum is calculated, with zerofilled checksum field
+	pckt->hdr.checksum = 0;
 
 	const uint8_t icmp_type = (family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
 #ifdef __FreeBSD__
@@ -478,41 +482,44 @@ int constructPack(struct packet* pckt, int family, int pingHostId, int cnt)
 	pckt->hdr.icmp_type = icmp_type;
 	pckt->hdr.icmp_id = pid;
 	pckt->hdr.icmp_seq = cnt;
-	pckt->hdr.icmp_cksum = checksum((const unsigned char *) &pckt, sizeof( pckt->hdr ) + rsize);
+	pckt->hdr.icmp_cksum = checksum((const unsigned char *) &pckt, rsize);
 #else
 	pckt->hdr.code = 0;
 	pckt->hdr.type = icmp_type;
 	pckt->hdr.un.echo.id = pid;
 	pckt->hdr.un.echo.sequence = cnt;
-	pckt->hdr.checksum = checksum((const unsigned char *) &pckt, sizeof( pckt->hdr ) + rsize);
+	pckt->hdr.checksum = checksum((const unsigned char *) &pckt, rsize);
 #endif
 	return rsize;
+}
+
+void sendOnePing( struct PreparedPing* pp , int count )
+{
+	struct packet pckt;
+
+	int rsize = constructPack( &pckt, pp->psaddr.sin6_family, pp->pingHostId, count );
+	int sr = sendto(pp->fd, (char*)&pckt, rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
+
+	struct PingData* pd = PingData + pp->pingHostId;
+	if( sr <= 0 )
+	{
+		pd->ping_failed_to_send = 1;
+		if( using_regular_ping )
+		{
+			ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
+		}
+	}
+	else
+	{
+		pd->ping_failed_to_send = 0;
+	}
 }
 
 void singleping( struct PreparedPing* pp )
 {
 	setNoBlock( pp->fd );
 
-	struct packet pckt;
-
-	{
-		int rsize = constructPack(&pckt, pp->psaddr.sin6_family, pp->pingHostId, 1);
-
-		int sr = sendto(pp->fd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
-
-		if( sr <= 0 )
-		{
-			ping_failed_to_send = 1;
-			if( using_regular_ping )
-			{
-				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
-			}
-		}
-		else
-		{
-			ping_failed_to_send = 0;
-		}
-	}
+	sendOnePing( pp, 1 );
 }
 
 void ping( struct PreparedPing* pp )
@@ -524,25 +531,9 @@ void ping( struct PreparedPing* pp )
 
 	double stime = OGGetAbsoluteTime();
 
-	struct packet pckt;
 	do
 	{
-		int rsize = constructPack(&pckt, pp->psaddr.sin6_family, pp->pingHostId, cnt++);
-
-		int sr = sendto(pp->fd, (char*) &pckt, sizeof( pckt.hdr ) + rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
-
-		if( sr <= 0 )
-		{
-			ping_failed_to_send = 1;
-			if( using_regular_ping )
-			{
-				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
-			}
-		}
-		else
-		{
-			ping_failed_to_send = 0;
-		}
+		sendOnePing( pp, cnt++ );
 
 		if( precise_ping )
 		{

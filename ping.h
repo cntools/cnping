@@ -55,6 +55,7 @@ struct PingData
 	double globinterval, globlast;
 	uint64_t globalrx;
 	uint64_t globallost;
+	int ping_failed_to_send;
 
 	// pointer to the related prepared ping so it can be freed at exit
 	struct PreparedPing* pp;
@@ -82,7 +83,6 @@ void singleping( struct PreparedPing* pp ); // If using this, must call ping_set
 
 //If pingperiodseconds = -1, run ping/do_pinger once and exit.
 extern float pingperiodseconds;
-extern int ping_failed_to_send;
 
 // resolvs the hostname and prepares the socket. Might return NULL on error
 struct PreparedPing* ping_setup(const char * strhost, const char * device);
