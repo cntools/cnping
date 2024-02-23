@@ -77,6 +77,14 @@ updateicons : ${ICONSPATH}scalable/apps/${APPNAME}.svg
 	convert $^ -resize 256x256 ${ICONSPATH}256x256/apps/${APPNAME}.png
 	convert $^ -resize 1024x1024 ${ICONSPATH}1024x1024/apps/${APPNAME}.png
 
+# after creating the ico file use GIMP to compress it:
+# Image-> Mode -> Indexed...
+# Choose "Generate optimum palette"
+# Maximum number of colors: 3 (may change if the icon changes)
+# "Convert"
+# File -> Export As
+# Check "Compressed (PNG)" in every resolution
+# "Export"
 cnping.ico: ${ICONSPATH}scalable/apps/${APPNAME}.svg
-	convert $^ -density 300 -define icon:auto-resize=128,32 -background none $@
+	convert $^ -density 300 -define icon:auto-resize=256,64,16 -background none $@
 
