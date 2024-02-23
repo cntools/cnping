@@ -5,6 +5,7 @@
 #include <math.h>
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 #if defined( WINDOWS ) || defined( WIN32 )
 #ifdef _MSC_VER
 #define strdup _strdup
@@ -166,8 +167,12 @@ void display( uint8_t *buf, int bytes, unsigned int pingHostId )
 	HandleGotPacket( pd, reqid, 0 );
 }
 
+// returns the size of the payload
 int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData * pd )
 {
+	static const uint32_t SizeOfPatternAndCycle = 4 + sizeof(pattern);
+	assert( bufflen >= SizeOfPatternAndCycle + ExtraPingSize );
+
 	buffer[0] = pd->current_cycle >> 24;
 	buffer[1] = pd->current_cycle >> 16;
 	buffer[2] = pd->current_cycle >> 8;
@@ -175,7 +180,7 @@ int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData * pd )
 
 	memcpy( buffer+4, pattern, sizeof(pattern) );
 
-	if( ping_failed_to_send )
+	if( pd->ping_failed_to_send )
 	{
 		pd->PingSendTimes[(pd->current_cycle+PINGCYCLEWIDTH-1)&(PINGCYCLEWIDTH-1)] = 0; //Unset ping send.
 	}
@@ -184,7 +189,10 @@ int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData * pd )
 
 	pd->current_cycle++;
 
-	return 12 + ExtraPingSize;
+	// zerofill the extra data
+	memset( buffer+SizeOfPatternAndCycle, 0, ExtraPingSize );
+
+	return SizeOfPatternAndCycle + ExtraPingSize;
 }
 
 void * PingListen( void * r )
@@ -926,7 +934,8 @@ int main( int argc, const char ** argv )
 
 	freePingHostList( &pinghostList, &pinghostListSize );
 
-	for( int pingHostId = 0; pingHostId < pinghostListSize; ++pingHostId)
+	// free the PingData array
+	for( int pingHostId = 0; pingHostId < pinghostListSize; ++pingHostId )
 	{
 		if(PingData[pingHostId].pp)
 		{
