@@ -79,6 +79,9 @@ int main( int argc, char ** argv )
 	mask = 1<<(32-atoi(argv[2]));
 	speed = atof(argv[3]);
 
+	struct PingData localPingData;
+	PingData = &localPingData;
+
 	base &= ~(mask-1);
 	printf( "Base: %08x / Mask: %08x\n", base, mask );
 	for( offset = 0; offset < mask; offset++ )

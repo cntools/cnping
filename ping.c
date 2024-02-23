@@ -355,7 +355,7 @@ int bindDevice( int sock, const char* device )
 // 0 = failed, 1 = this is a ICMP Response
 int isICMPResponse( int family, unsigned char* buf, int bytes )
 {
-	assert( family == AF_INET || family == AF_INET6);
+	if( family != AF_INET && family != AF_INET6 ) return 0;
 
 	if( bytes < 1 ) return 0;
 
@@ -430,7 +430,7 @@ void listener( struct PreparedPing* pp )
 
 keep_retry_quick:
 		bytes = recvfrom( listenSock, (void*) buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
-		if( !isICMPResponse( pp->psaddr.sin6_family, buf, bytes) ) continue;
+		if( !isICMPResponse( recvFromAddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
 		if( using_regular_ping && memcmp(&recvFromAddr, &pp->psaddr, min(recvFromAddrLen, pp->psaddr_len) ) != 0 ) continue;
