@@ -482,13 +482,13 @@ int constructPack(struct packet* pckt, int family, int pingHostId, int cnt)
 	pckt->hdr.icmp_type = icmp_type;
 	pckt->hdr.icmp_id = pid;
 	pckt->hdr.icmp_seq = cnt;
-	pckt->hdr.icmp_cksum = checksum((const unsigned char *) &pckt, rsize);
+	pckt->hdr.icmp_cksum = checksum((const unsigned char *) pckt, rsize);
 #else
 	pckt->hdr.code = 0;
 	pckt->hdr.type = icmp_type;
 	pckt->hdr.un.echo.id = pid;
 	pckt->hdr.un.echo.sequence = cnt;
-	pckt->hdr.checksum = checksum((const unsigned char *) &pckt, rsize);
+	pckt->hdr.checksum = checksum((const unsigned char *) pckt, rsize);
 #endif
 	return rsize;
 }
