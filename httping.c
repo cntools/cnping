@@ -35,12 +35,8 @@
 
 #define HTTPTIMEOUT 3.0
 
-//Callbacks (when started/received)
-void HTTPingCallbackStart( int seqno );
-void HTTPingCallbackGot( int seqno );
-
 //Don't dynamically allocate resources here, since execution may be stopped arbitrarily.
-void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile double * timeouttime, int * socketptr, volatile int * getting_host_by_name, const char * device)
+void DoHTTPing( const char * addy, double minperiod, int * seqnoptr, volatile double * timeouttime, int * socketptr, volatile int * getting_host_by_name, const char * device, unsigned int pingHostId )
 {
 #if defined(WIN32) || defined(WINDOWS)
 	(void) device; // option is not available for windows. Suppress unused warning.
@@ -138,7 +134,7 @@ reconnect:
 		int n = sprintf( buf, "HEAD %s HTTP/1.1\r\nConnection: keep-alive\r\nHost: %s\r\n\r\n", eurl?eurl:"/favicon.ico", hostname );
 
 		(*seqnoptr) ++;
-		HTTPingCallbackStart( *seqnoptr );
+		HTTPingCallbackStart( *seqnoptr, pingHostId );
 
 		int rs = send( httpsock, buf, n, MSG_NOSIGNAL );
 		double starttime = *timeouttime = OGGetAbsoluteTime();
@@ -173,7 +169,7 @@ reconnect:
 		}
 		*timeouttime = OGGetAbsoluteTime();
 
-		HTTPingCallbackGot( *seqnoptr );
+		HTTPingCallbackGot( *seqnoptr, pingHostId );
 
 		double delay_time = minperiod - (*timeouttime - starttime);
 		if( delay_time > 0 )
@@ -194,10 +190,13 @@ fail:
 
 struct HTTPPingLaunch
 {
+	// arguments
 	const char * addy;
 	double minperiod;
 	const char * device;
+	unsigned int pingHostId;
 
+	// internal
 	volatile double timeout_time;
 	volatile int failed;
 	int seqno;
@@ -210,7 +209,7 @@ static void * DeployPing( void * v )
 	struct HTTPPingLaunch *hpl = (struct HTTPPingLaunch*)v;
 	hpl->socket = 0;
 	hpl->getting_host_by_name = 0;
-	DoHTTPing( hpl->addy, hpl->minperiod, &hpl->seqno, &hpl->timeout_time, &hpl->socket, &hpl->getting_host_by_name, hpl->device );
+	DoHTTPing( hpl->addy, hpl->minperiod, &hpl->seqno, &hpl->timeout_time, &hpl->socket, &hpl->getting_host_by_name, hpl->device, hpl->pingHostId );
 	hpl->failed = 1;
 	return 0;
 }
@@ -250,15 +249,14 @@ static void * PingRunner( void * v )
 	return 0;
 }
 
-int StartHTTPing( const char * addy, double minperiod, const char * device)
+int StartHTTPing( const char * addy, double minperiod, const char * device, unsigned int pingHostId )
 {
 	struct HTTPPingLaunch *hpl = malloc( sizeof( struct HTTPPingLaunch ) );
 	hpl->addy = addy;
 	hpl->minperiod = minperiod;
 	hpl->device = device;
+	hpl->pingHostId = pingHostId;
 	OGCreateThread( PingRunner, hpl );
 	return 0;
 }
-
-
 
