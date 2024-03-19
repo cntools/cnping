@@ -330,6 +330,12 @@ void DrawFrameHistogram( const char * pinghost, unsigned int count, unsigned int
 	unsigned int assignedScreenHeight = screeny / count;
 	unsigned int heightOffset = assignedScreenHeight * pingHostId;
 
+	// last pingHost gets all the extra pixels
+	if( pingHostId == pinghostListSize-1 )
+	{
+		assignedScreenHeight += screeny % count;
+	}
+
 	if( categories <= 2 )
 	{
 		goto nodata;
@@ -476,7 +482,14 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int pingHost
 
 	unsigned int assignedScreenHeight = screeny / count;
 	unsigned int heightOffset = assignedScreenHeight * pingHostId;
-	unsigned int heightOffsetBottom = assignedScreenHeight * (pingHostId+1);
+
+	// last pingHost gets all the extra pixels
+	if( pingHostId == pinghostListSize-1 )
+	{
+		assignedScreenHeight += screeny % count;
+	}
+
+	unsigned int heightOffsetBottom = heightOffset + assignedScreenHeight;
 
 	if (!GuiYscaleFactorIsConstant)
 	{
