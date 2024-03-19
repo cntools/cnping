@@ -818,7 +818,7 @@ int main( int argc, const char ** argv )
 	}
 
 	// iterate over all ping hosts and create ping threads for them
-	unsigned int pingHostId = 0;
+	unsigned int pingHostId = pinghostListSize-1; // iterate in reverse
 	struct PingHost * current = pinghostList;
 	for ( ; current ; current = current->next )
 	{
@@ -853,7 +853,7 @@ int main( int argc, const char ** argv )
 			}
 		}
 
-		pingHostId++;
+		pingHostId--;
 	}
 
 
@@ -871,7 +871,7 @@ int main( int argc, const char ** argv )
 		CNFGGetDimensions( &screenx, &screeny );
 
 		// iterate over all ping hosts and create ping threads for them
-		unsigned int pingHostId = 0;
+		unsigned int pingHostId = pinghostListSize-1; // iterate in reverse
 		struct PingHost * current = pinghostList;
 		for ( ; current ; current = current->next )
 		{
@@ -885,7 +885,7 @@ int main( int argc, const char ** argv )
 				DrawFrameHistogram( current->host, pinghostListSize, pingHostId );
 			}
 
-			pingHostId++;
+			pingHostId--;
 		}
 
 		CNFGPenX = 100; CNFGPenY = 100;
