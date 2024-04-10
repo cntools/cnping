@@ -735,7 +735,7 @@ int main( int argc, const char ** argv )
 			//Parameter-based field.
 			switch( thisargv[1] )
 			{
-				case 'h': prependPingHost( &pinghostList, &pinghostListSize, nextargv ); break;
+				case 'h': appendPingHost( &pinghostList, &pinghostListSize, nextargv ); break;
 				case 'p': pingperiodseconds = atof( nextargv ); break;
 				case 's': ExtraPingSize = atoi( nextargv ); break;
 				case 'y': GuiYScaleFactor = atof( nextargv ); break;
@@ -750,7 +750,7 @@ int main( int argc, const char ** argv )
 			//Unmarked fields
 			switch( argcunmarked++ )
 			{
-				case 1: prependPingHost( &pinghostList, &pinghostListSize, thisargv ); break;
+				case 1: appendPingHost( &pinghostList, &pinghostListSize, thisargv ); break;
 				case 2: pingperiodseconds = atof( thisargv ); break;
 				case 3: ExtraPingSize = atoi( thisargv ); break;
 				case 4: GuiYScaleFactor = atof( thisargv ); break;

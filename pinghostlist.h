@@ -10,7 +10,7 @@ struct PingHost
 };
 
 // add a new entry to the list
-void prependPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue );
+void appendPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue );
 
 // delete the list
 // *list and *listsize will be set to 0
