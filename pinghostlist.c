@@ -3,12 +3,31 @@
 #include <stddef.h>
 #include <stdlib.h>
 
-void prependPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue )
+void appendPingHost( struct PingHost ** list, unsigned int * listSize, const char * newEntryValue )
 {
+	// find last entry
+	struct PingHost * current = *list;
+	struct PingHost * last = current;
+	while( current )
+	{
+		struct PingHost * next = current->next;
+		last = current;
+		current = next;
+	}
+
 	struct PingHost* newEntry = malloc( sizeof(struct PingHost) );
 	newEntry->host = newEntryValue;
-	newEntry->next = *list;
-	*list = newEntry;
+	newEntry->next = NULL;
+
+	if ( last )
+	{
+		last->next = newEntry;
+	}
+	else
+	{
+		*list = newEntry;
+	}
+
 	(*listSize) ++;
 }
 
