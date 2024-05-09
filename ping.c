@@ -256,6 +256,7 @@ struct icmphdr
 		} frag;
 	} un;
 };
+#undef min
 #endif
 
 
@@ -406,9 +407,7 @@ void listener( struct PreparedPing* pp )
 {
 	int listenSock = createSocket( pp->psaddr.sin6_family );
 
-#ifndef WIN32
 	setTTL( listenSock, pp->psaddr.sin6_family );
-#endif
 
 	struct sockaddr_in6 recvFromAddr;
 	unsigned char buf[66000];
