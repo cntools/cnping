@@ -424,7 +424,7 @@ nodata:
 #define ELEM_SWAP(a, b) { register double t=(a);(a)=(b);(b)=t; }
 #endif
 
-double quick_select_median( double arr[], uint16_t n )
+double QuickSelectMedian( double arr[], uint16_t n )
 {
 	uint16_t low, high;
 	uint16_t median;
@@ -474,7 +474,7 @@ double quick_select_median( double arr[], uint16_t n )
 	return arr[median];
 }
 
-double get_median_ping()
+double GetMedianPing()
 {
 	//create array of valid ping times
 	double *validPingsArr = malloc( screenx * sizeof( double ));
@@ -497,7 +497,7 @@ double get_median_ping()
 	// calculate median
 	double result = 0;
 	if ( nValidPings > 0 )
-		result = quick_select_median( validPingsArr, nValidPings );
+		result = QuickSelectMedian( validPingsArr, nValidPings );
 	free( validPingsArr );
 
 	return result;
@@ -564,7 +564,7 @@ void DrawFrame( void )
 	}
 
 	double avg = totaltime / totalcountok;
-	double median = get_median_ping();
+	double median = GetMedianPing();
 	loss = (double) totalcountloss / (totalcountok + totalcountloss) * 100;
 
 	for( i = 0; i < screenx; i++ )
