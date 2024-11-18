@@ -417,6 +417,86 @@ nodata:
 	return;
 }
 
+// algorithm from here: https://stackoverflow.com/a/7477879
+// cites: "Algorithm from Numerical recipes in C of 1992"
+// Also from here published in the public domain http://ndevilla.free.fr/median/median/src/quickselect.c
+#ifndef ELEM_SWAP(a,b)
+#define ELEM_SWAP(a,b) { register double t=(a);(a)=(b);(b)=t; }
+#endif
+
+double quick_select_median(double arr[], uint16_t n)
+{
+  uint16_t low, high ;
+  uint16_t median;
+  uint16_t middle, ll, hh;
+  low = 0 ; high = n-1 ; median = (low + high) / 2;
+  for (;;) {
+    if (high <= low) /* One element only */
+      return arr[median] ;
+    if (high == low + 1) { /* Two elements only */
+      if (arr[low] > arr[high])
+        ELEM_SWAP(arr[low], arr[high]) ;
+      return arr[median] ;
+    }
+    /* Find median of low, middle and high items; swap into position low */
+    middle = (low + high) / 2;
+    if (arr[middle] > arr[high])
+      ELEM_SWAP(arr[middle], arr[high]) ;
+    if (arr[low] > arr[high])
+      ELEM_SWAP(arr[low], arr[high]) ;
+    if (arr[middle] > arr[low])
+      ELEM_SWAP(arr[middle], arr[low]) ;
+    /* Swap low item (now in position middle) into position (low+1) */
+    ELEM_SWAP(arr[middle], arr[low+1]) ;
+    /* Nibble from each end towards middle, swapping items when stuck */
+    ll = low + 1;
+    hh = high;
+    for (;;) {
+      do ll++; while (arr[low] > arr[ll]) ;
+      do hh--; while (arr[hh] > arr[low]) ;
+      if (hh < ll)
+        break;
+      ELEM_SWAP(arr[ll], arr[hh]) ;
+    }
+    /* Swap middle item (in position low) back into correct position */
+    ELEM_SWAP(arr[low], arr[hh]) ;
+    /* Re-set active partition */
+    if (hh <= median)
+      low = ll;
+    if (hh >= median)
+      high = hh - 1;
+  }
+  return arr[median];
+}
+
+double get_median_ping()
+{
+  //create array of valid ping times
+  double* validPingsArr = malloc(screenx * sizeof(double));
+  size_t nValidPings = 0;
+
+  for(size_t i = 0; i < screenx; i++ )
+  {
+    int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+    double st = PingSendTimes[index];
+    double rt = PingRecvTimes[index];
+
+    if( rt > st ) // ping received
+    {
+      double dt = rt - st;
+      dt *= 1000;
+      validPingsArr[nValidPings++] = dt;
+    }
+  }
+
+  // calculate median
+  double result = 0;
+  if(nValidPings > 0)
+    result = quick_select_median(validPingsArr, nValidPings);
+  free(validPingsArr);
+
+  return result;
+}
 
 void DrawFrame( void )
 {
@@ -479,6 +559,7 @@ void DrawFrame( void )
 	}
 
 	double avg = totaltime / totalcountok;
+        double median = get_median_ping();
 	loss = (double) totalcountloss / (totalcountok + totalcountloss) * 100;
 
 	for( i = 0; i < screenx; i++ )
@@ -522,12 +603,13 @@ void DrawFrame( void )
 		"Max :%6.2f ms    Historical max:   %5.2f ms\n"
 		"Avg :%6.2f ms    Biggest interval: %5.2f ms\n"
 #ifdef WIN32
-		"Std :%6.2f ms    Historical loss:  %I64u/%I64u %5.3f%%\n"
+		"Med :%6.2f ms    Historical loss:  %I64u/%I64u %5.3f%%\n"
 #else
-		"Std :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
+		"Med :%6.2f ms    Historical loss:  %lu/%lu %5.3f%%\n"
 #endif
-		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, stddev,
-		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), loss );
+                "Std :%6.2f ms\n"
+		"Loss:%6.1f %%", last, pinghost, mintime, maxtime, globmaxtime*1000, avg, globinterval*1000.0, median,
+		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), stddev, loss );
 
 	DrawMainText( stbuf );
 	OGUSleep( 1000 );
