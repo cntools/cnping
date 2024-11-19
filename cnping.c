@@ -439,17 +439,17 @@ double QuickSelectMedian( double arr[], uint16_t n )
 		if ( high == low + 1 )
 		{ /* Two elements only */
 			if ( arr[low] > arr[high] )
-			ELEM_SWAP( arr[low], arr[high] );
+				ELEM_SWAP( arr[low], arr[high] );
 			return arr[median];
 		}
 		/* Find median of low, middle and high items; swap into position low */
 		middle = (low + high) / 2;
 		if ( arr[middle] > arr[high] )
-		ELEM_SWAP( arr[middle], arr[high] );
+			ELEM_SWAP( arr[middle], arr[high] );
 		if ( arr[low] > arr[high] )
-		ELEM_SWAP( arr[low], arr[high] );
+			ELEM_SWAP( arr[low], arr[high] );
 		if ( arr[middle] > arr[low] )
-		ELEM_SWAP( arr[middle], arr[low] );
+			ELEM_SWAP( arr[middle], arr[low] );
 		/* Swap low item (now in position middle) into position (low+1) */
 		ELEM_SWAP( arr[middle], arr[low + 1] );
 		/* Nibble from each end towards middle, swapping items when stuck */
