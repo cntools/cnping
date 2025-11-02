@@ -17,6 +17,14 @@
 
 int resolveName(struct sockaddr* addr, socklen_t* addr_len, const char* hostname, int family)
 {
+#ifdef WIN32
+	// force ipv4 only on windows -> ipv6 ping is not supprted
+	if(family == AF_UNSPEC)
+	{
+		family = AF_INET;
+	}
+#endif
+
 	int result;
 	struct addrinfo* res = NULL;
 

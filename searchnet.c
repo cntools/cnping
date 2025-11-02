@@ -12,16 +12,20 @@ uint32_t my_random_key;
 uint8_t send_id[4];
 
 extern float pingperiodseconds;
+struct PingData * PingData = NULL;
 
 void * PingListen( void * r )
 {
-	listener();
+	struct PreparedPing* pp = (struct PreparedPing*) r;
+	listener( pp );
 	printf( "Fault on listen.\n" );
 	exit( -2 );
 }
 
-void display(uint8_t *buf, int bytes)
+void display(uint8_t *buf, int bytes, unsigned int pingHostId)
 {
+	(void) pingHostId;
+
 	uint32_t reqid = ((uint32_t)buf[0+1] << 24) | (buf[1+1]<<16) | (buf[2+1]<<8) | (buf[3+1]);
 
 	if( reqid != my_random_key ) return;
@@ -29,8 +33,10 @@ void display(uint8_t *buf, int bytes)
 	printf( "%d.%d.%d.%d\n", buf[4+1], buf[5+1], buf[6+1], buf[7+1] );
 }
 
-int load_ping_packet( uint8_t * buffer, int bufflen )
+int load_ping_packet( uint8_t * buffer, int bufflen, struct PingData* pd )
 {
+	(void) pd;
+
 	buffer[0+1] = my_random_key >> 24;
 	buffer[1+1] = my_random_key >> 16;
 	buffer[2+1] = my_random_key >> 8;
@@ -53,8 +59,13 @@ int main( int argc, char ** argv )
 	char dispip[32];
 	float speed;
 
-	ping_setup( 0, 0);
-	OGCreateThread( PingListen, 0 );
+	struct PreparedPing* pp = ping_setup( 0, 0);
+	if(!pp)
+	{
+		return -1;
+	}
+
+	OGCreateThread( PingListen, pp );
 	srand( ((int)(OGGetAbsoluteTime()*10000)) );
 	my_random_key = rand();
 
@@ -67,6 +78,9 @@ int main( int argc, char ** argv )
 	base = ntohl(inet_addr( argv[1] ));
 	mask = 1<<(32-atoi(argv[2]));
 	speed = atof(argv[3]);
+
+	struct PingData localPingData;
+	PingData = &localPingData;
 
 	base &= ~(mask-1);
 	printf( "Base: %08x / Mask: %08x\n", base, mask );
@@ -81,13 +95,17 @@ int main( int argc, char ** argv )
 //		printf( "Pinging: %s\n", dispip );
 		pingperiodseconds = -1;
 
-		struct sockaddr_in6 psaddr;
-		socklen_t psaddr_len = sizeof(psaddr);
-		resolveName((struct sockaddr*) &psaddr, &psaddr_len, dispip, AF_UNSPEC);
-		singleping((struct sockaddr*) &psaddr, psaddr_len );
+		pp->psaddr_len = sizeof(pp->psaddr);
+		pp->psaddr.sin6_family = AF_INET;
+		resolveName((struct sockaddr*) &pp->psaddr, &pp->psaddr_len, dispip, AF_UNSPEC);
+		pp->pingHostId = 0;
+
+		singleping( pp );
 
 		OGUSleep( (int)(speed * 1000000) );
 	}
+
+	free(pp);
 
 	return 0;
 }
