@@ -266,7 +266,7 @@ void HandleMotion( int x, int y, int mask )
 	if( view_cycle < 0 ) view_cycle = 0;
 	if( view_cycle >= current_cycle ) in_scrollback_mode = 0;
 }
-void HandleDestroy() { exit(0); }
+int HandleDestroy() { exit(0); }
 
 
 double GetWindMaxPingTime( void )
