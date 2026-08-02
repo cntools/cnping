@@ -81,6 +81,7 @@ int in_histogram_mode, in_frame_mode = 1;
 int in_scrollback_mode;
 int view_cycle;
 int drag_lastx;
+int zoom_px = 1, zoom_pings = 1;
 void HandleGotPacket( int seqno, int timeout );
 
 #if defined( WINDOWS ) || defined( WIN32 )
@@ -248,21 +249,39 @@ void HandleKey( int keycode, int bDown )
 }
 void HandleButton( int x, int y, int button, int bDown )
 {
-	if( button != 1 || !bDown ) return;
+	if( !bDown ) return;
+	if( button == 4 || button == 0x0E || button == 5 || button == 0x0F ) //Mouse wheel: X11 4/5, Windows 0x0E/0x0F
+	{
+		if( button == 4 || button == 0x0E )
+		{
+			if( zoom_pings > 1 ) zoom_pings--;
+			else if( zoom_px < 5 ) zoom_px++;
+		}
+		else
+		{
+			if( zoom_px > 1 ) zoom_px--;
+			else if( zoom_pings < 10 ) zoom_pings++;
+		}
+		return;
+	}
+	if( button != 1 ) return;
 	drag_lastx = x;
 	if( in_scrollback_mode && x >= screenx-BUTTON_X && y <= BUTTON_Y ) in_scrollback_mode = 0;
+	if( ( zoom_px > 1 || zoom_pings > 1 ) && x >= screenx-BUTTON_X && y >= BUTTON_Y+4 && y <= BUTTON_Y*2+2 ) zoom_px = zoom_pings = 1;
 }
 
 void HandleMotion( int x, int y, int mask )
 {
 	if( !( mask & 1 ) ) return;
+	int dp = ( x - drag_lastx ) * zoom_pings / zoom_px;
+	if( !dp ) return;
 	if( !in_scrollback_mode )
 	{
 		view_cycle = current_cycle;
 		in_scrollback_mode = 1;
 	}
-	view_cycle += x - drag_lastx;
-	drag_lastx = x;
+	view_cycle += dp;
+	drag_lastx += dp * zoom_px / zoom_pings;
 	if( view_cycle < 0 ) view_cycle = 0;
 	if( view_cycle >= current_cycle ) in_scrollback_mode = 0;
 }
@@ -273,8 +292,10 @@ double GetWindMaxPingTime( void )
 {
 	int i;
 	double maxtime = 0;
+	int nvis = ((screenx-1)/zoom_px + 1) * zoom_pings;
+	if( nvis > PINGCYCLEWIDTH ) nvis = PINGCYCLEWIDTH;
 
-	for( i = 0; i < screenx; i++ )
+	for( i = 0; i < nvis; i++ )
 	{
 		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
@@ -459,20 +480,18 @@ void DrawFrame( void )
 	double last = -1;
 	double loss = 100.00;
 	double windmaxtime = GetWindMaxPingTime();
+	int nvis = ((screenx-1)/zoom_px + 1) * zoom_pings;
+	if( nvis > PINGCYCLEWIDTH ) nvis = PINGCYCLEWIDTH;
 
-	for( i = 0; i < screenx; i++ )
+	for( i = 0; i < nvis; i++ )
 	{
 		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
 		double rt = PingRecvTimes[index];
 
-		double dt = 0;
-
 		if( rt > st ) // ping received
 		{
-			CNFGColor( 0xffffffff );
-			dt = rt - st;
-			dt *= 1000;
+			double dt = ( rt - st ) * 1000;
 			totaltime += dt;
 			if( dt < mintime ) mintime = dt;
 			if( dt > maxtime ) maxtime = dt;
@@ -482,32 +501,76 @@ void DrawFrame( void )
 		}
 		else if (st != 0) // ping sent but not received
 		{
-			CNFGColor( 0xff0000ff );
-			dt = now - st;
-			dt *= 1000;
 			if( i > 5 ) totalcountloss++; //Get a freebie on the first 5.
 		}
-		else // no ping sent for this point in time (after startup)
+	}
+
+	if (!GuiYscaleFactorIsConstant)
+	{
+		GuiYScaleFactor =  (screeny - 50) / windmaxtime;
+	}
+
+	for( i = 0; i < screenx; i++ )
+	{
+		double dts[10];
+		double redh = 0;
+		int n = 0;
+		int o = i / zoom_px * zoom_pings;
+		int k;
+
+		for( k = 0; k < zoom_pings; k++ )
+		{
+			if( o + k >= PINGCYCLEWIDTH ) break;
+			int index = ((view_cycle - o - k - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+			double st = PingSendTimes[index];
+			double rt = PingRecvTimes[index];
+
+			if( rt > st ) // ping received
+			{
+				double dt = ( rt - st ) * 1000;
+				int j = n++;
+				while( j > 0 && dts[j-1] > dt ) { dts[j] = dts[j-1]; j--; }
+				dts[j] = dt;
+			}
+			else if (st != 0) // ping sent but not received
+			{
+				double dt = ( now - st ) * 1000;
+				if( dt > redh ) redh = dt;
+			}
+		}
+
+		int bottom = screeny-1;
+		if( !n && redh == 0 ) // no ping sent for this point in time (after startup)
 		{
 			CNFGColor( 0x000000ff );
-			dt = 99 * 1000; // assume 99s to fill screen black
+			CNFGTackSegment( i, bottom, i, 0 );
+			continue;
 		}
-
-		if (!GuiYscaleFactorIsConstant)
+		if( redh > 0 )
 		{
-			GuiYScaleFactor =  (screeny - 50) / windmaxtime;
+			int top = screeny - (int)( redh*GuiYScaleFactor );
+			if( top < 0 ) top = 0;
+			CNFGColor( 0xff0000ff );
+			CNFGTackSegment( i, bottom, i, top );
 		}
-
-		int h = dt*GuiYScaleFactor;
-		int top = screeny - h;
-		if( top < 0 ) top = 0;
-		CNFGTackSegment( i, screeny-1, i, top );
+		for( k = 0; k < n; k++ )
+		{
+			int top = screeny - (int)( dts[k]*GuiYScaleFactor );
+			if( top < 0 ) top = 0;
+			if( top < bottom )
+			{
+				int s = 255 * ( 2*n - k ) / ( 2*n ); //Fade by how many pings reach this band.
+				CNFGColor( k ? ((s<<24) | (s<<16) | ((128 + s/2)<<8) | 0xff) : 0xffffffff );
+				CNFGTackSegment( i, bottom, i, top );
+			}
+			bottom = top;
+		}
 	}
 
 	double avg = totaltime / totalcountok;
 	loss = (double) totalcountloss / (totalcountok + totalcountloss) * 100;
 
-	for( i = 0; i < screenx; i++ )
+	for( i = 0; i < nvis; i++ )
 	{
 		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
@@ -564,6 +627,17 @@ void DrawFrame( void )
 		CNFGColor( 0xffffffff );
 		CNFGPenX = screenx-BUTTON_X+4; CNFGPenY = 5;
 		CNFGDrawText( "LIVE", 2 );
+	}
+
+	if( zoom_px > 1 || zoom_pings > 1 )
+	{
+		char zbuf[8];
+		int zl = sprintf( zbuf, "%d:%d", zoom_px, zoom_pings );
+		CNFGColor( 0x8080ffff );
+		CNFGTackRectangle( screenx-BUTTON_X, BUTTON_Y+4, screenx-2, BUTTON_Y*2+2 );
+		CNFGColor( 0x000000ff );
+		CNFGPenX = screenx-BUTTON_X/2-1 - zl*3; CNFGPenY = BUTTON_Y+7;
+		CNFGDrawText( zbuf, 2 );
 	}
 
 	OGUSleep( 1000 );
