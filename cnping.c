@@ -69,6 +69,8 @@ uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
+#define BUTTON_X 34
+#define BUTTON_Y 16
 
 double PingSendTimes[PINGCYCLEWIDTH];
 double PingRecvTimes[PINGCYCLEWIDTH];
@@ -248,7 +250,7 @@ void HandleButton( int x, int y, int button, int bDown )
 {
 	if( button != 1 || !bDown ) return;
 	drag_lastx = x;
-	if( in_scrollback_mode && x >= screenx-34 && y <= 16 ) in_scrollback_mode = 0;
+	if( in_scrollback_mode && x >= screenx-BUTTON_X && y <= BUTTON_Y ) in_scrollback_mode = 0;
 }
 
 void HandleMotion( int x, int y, int mask )
@@ -558,9 +560,9 @@ void DrawFrame( void )
 	if( in_scrollback_mode )
 	{
 		CNFGColor( 0xff0000ff );
-		CNFGTackRectangle( screenx-34, 2, screenx-2, 16 );
+		CNFGTackRectangle( screenx-BUTTON_X, 2, screenx-2, BUTTON_Y );
 		CNFGColor( 0xffffffff );
-		CNFGPenX = screenx-30; CNFGPenY = 5;
+		CNFGPenX = screenx-BUTTON_X+4; CNFGPenY = 5;
 		CNFGDrawText( "LIVE", 2 );
 	}
 
