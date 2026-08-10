@@ -69,6 +69,8 @@ uint8_t pattern[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF};
 
 #define PINGCYCLEWIDTH 8192
 #define TIMEOUT 4
+#define BUTTON_X 34
+#define BUTTON_Y 16
 
 double PingSendTimes[PINGCYCLEWIDTH];
 double PingRecvTimes[PINGCYCLEWIDTH];
@@ -76,6 +78,9 @@ int current_cycle = 0;
 
 int ExtraPingSize;
 int in_histogram_mode, in_frame_mode = 1;
+int in_scrollback_mode;
+int view_cycle;
+int drag_lastx;
 void HandleGotPacket( int seqno, int timeout );
 
 #if defined( WINDOWS ) || defined( WIN32 )
@@ -241,8 +246,26 @@ void HandleKey( int keycode, int bDown )
 
 	}
 }
-void HandleButton( int x, int y, int button, int bDown ){}
-void HandleMotion( int x, int y, int mask ){}
+void HandleButton( int x, int y, int button, int bDown )
+{
+	if( button != 1 || !bDown ) return;
+	drag_lastx = x;
+	if( in_scrollback_mode && x >= screenx-BUTTON_X && y <= BUTTON_Y ) in_scrollback_mode = 0;
+}
+
+void HandleMotion( int x, int y, int mask )
+{
+	if( !( mask & 1 ) ) return;
+	if( !in_scrollback_mode )
+	{
+		view_cycle = current_cycle;
+		in_scrollback_mode = 1;
+	}
+	view_cycle += x - drag_lastx;
+	drag_lastx = x;
+	if( view_cycle < 0 ) view_cycle = 0;
+	if( view_cycle >= current_cycle ) in_scrollback_mode = 0;
+}
 void HandleDestroy() { exit(0); }
 
 
@@ -253,7 +276,7 @@ double GetWindMaxPingTime( void )
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
 		double rt = PingRecvTimes[index];
 
@@ -424,6 +447,9 @@ void DrawFrame( void )
 
 	double now = OGGetAbsoluteTime();
 
+	if( !in_scrollback_mode ) view_cycle = current_cycle;
+	else if( current_cycle - view_cycle > PINGCYCLEWIDTH ) view_cycle = current_cycle - PINGCYCLEWIDTH;
+
 	double totaltime = 0;
 	int totalcountok = 0;
 	int totalcountloss = 0;
@@ -436,7 +462,7 @@ void DrawFrame( void )
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
 		double rt = PingRecvTimes[index];
 
@@ -483,7 +509,7 @@ void DrawFrame( void )
 
 	for( i = 0; i < screenx; i++ )
 	{
-		int index = ((current_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
+		int index = ((view_cycle - i - 1) + PINGCYCLEWIDTH) & (PINGCYCLEWIDTH-1);
 		double st = PingSendTimes[index];
 		double rt = PingRecvTimes[index];
 
@@ -530,6 +556,16 @@ void DrawFrame( void )
 		globallost, globalrx+globallost, globallost*100.0f/(globalrx+globallost), loss );
 
 	DrawMainText( stbuf );
+
+	if( in_scrollback_mode )
+	{
+		CNFGColor( 0xff0000ff );
+		CNFGTackRectangle( screenx-BUTTON_X, 2, screenx-2, BUTTON_Y );
+		CNFGColor( 0xffffffff );
+		CNFGPenX = screenx-BUTTON_X+4; CNFGPenY = 5;
+		CNFGDrawText( "LIVE", 2 );
+	}
+
 	OGUSleep( 1000 );
 }
 
