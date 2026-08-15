@@ -76,8 +76,7 @@ unsigned int pinghostListSize = 0;
 
 int ExtraPingSize;
 int in_histogram_mode, in_frame_mode = 1;
-int in_scrollback_mode;
-int view_cycle;
+int scrollback_x; // amount of cycles to scroll back, 0 if disabled
 int drag_lastx;
 void HandleGotPacket( struct PingData * pd, int seqno, int timeout );
 
@@ -260,29 +259,36 @@ void HandleButton( int x, int y, int button, int bDown )
 {
 	if( button != 1 || !bDown ) return;
 	drag_lastx = x;
-	if( in_scrollback_mode && x >= screenx-BUTTON_X && y <= BUTTON_Y ) in_scrollback_mode = 0;
+	if( scrollback_x && x >= screenx-BUTTON_X && y <= BUTTON_Y ) scrollback_x = 0;
 }
 
 void HandleMotion( int x, int y, int mask )
 {
 	if( !( mask & 1 ) ) return;
-	if( !in_scrollback_mode )
-	{
-		view_cycle = current_cycle;
-		in_scrollback_mode = 1;
+
+	scrollback_x -= x - drag_lastx;
+	if (scrollback_x < 0) {
+		scrollback_x = 0;
 	}
-	view_cycle += x - drag_lastx;
 	drag_lastx = x;
-	if( view_cycle < 0 ) view_cycle = 0;
-	if( view_cycle >= current_cycle ) in_scrollback_mode = 0;
 }
 void HandleDestroy() { exit(0); }
 
+int get_view_cycle( const int current_cycle )
+{
+	const int view_cycle = current_cycle - scrollback_x;
+	if ( view_cycle > current_cycle )
+		return current_cycle;
+	if ( view_cycle < 0 )
+		return 0;
+	return view_cycle;
+}
 
 double GetWindMaxPingTime( const struct PingData * pd )
 {
 	int i;
 	double maxtime = 0;
+	const int view_cycle = get_view_cycle( pd->current_cycle );
 
 	for( i = 0; i < screenx; i++ )
 	{
@@ -466,9 +472,10 @@ void DrawFrame( const char * pinghost, unsigned int count, unsigned int pingHost
 
 	double now = OGGetAbsoluteTime();
 
-	if( !in_scrollback_mode ) view_cycle = current_cycle;
-	else if( current_cycle - view_cycle > PINGCYCLEWIDTH ) view_cycle = current_cycle - PINGCYCLEWIDTH;
 	const struct PingData * pd = PingData + pingHostId;
+
+	int view_cycle = get_view_cycle( pd->current_cycle );
+	if( pd->current_cycle - view_cycle > PINGCYCLEWIDTH ) view_cycle = pd->current_cycle - PINGCYCLEWIDTH;
 
 	double totaltime = 0;
 	int totalcountok = 0;
@@ -914,7 +921,7 @@ int main( int argc, const char ** argv )
 			pingHostId++;
 		}
 
-		if( in_scrollback_mode )
+		if( scrollback_x )
 		{
 			CNFGColor( 0xff0000ff );
 			CNFGTackRectangle( screenx-BUTTON_X, 2, screenx-2, BUTTON_Y );
