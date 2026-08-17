@@ -17,11 +17,8 @@
 #include "tccheader.h"
 #endif
 
-int ping_failed_to_send;
 float pingperiodseconds;
 int precise_ping;
-struct sockaddr_in6 psaddr;
-socklen_t psaddr_len;
 int using_regular_ping;
 
 #ifdef WIN_USE_NO_ADMIN_PING
@@ -38,6 +35,12 @@ int using_regular_ping;
 
 #include "rawdraw/os_generic.h"
 
+// used to pack arguments for windows ping threads
+struct WindowsPingArgs
+{
+	struct PreparedPing* pp;
+	HANDLE icmpHandle;
+};
 
 
 #define MAX_PING_SIZE 16384
@@ -48,30 +51,29 @@ int using_regular_ping;
 	#pragma comment(lib, "iphlpapi.lib")
 #endif
 
-static og_sema_t s_disp;
-static og_sema_t s_ping;
-
-void ping_setup(const char * strhost, const char * device)
+struct PreparedPing* ping_setup(const char * strhost, const char * device)
 {
-	// resolve host
-	psaddr_len = sizeof(psaddr);
-	if( strhost )
-		resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
-	else
-		psaddr.sin6_family = AF_INET;
+	struct PreparedPing* pp = (struct PreparedPing*) malloc(sizeof(struct PreparedPing));
 
-	s_disp = OGCreateSema();
-	s_ping = OGCreateSema();
+	memset(&pp->psaddr, 0, sizeof(pp->psaddr));
+	pp->psaddr_len = sizeof(pp->psaddr);
+
+	// resolve host
+	if( strhost )
+		resolveName((struct sockaddr*) &pp->psaddr, &pp->psaddr_len, strhost, AF_INET); // only resolve ipv4 on windows
+	else
+		pp->psaddr.sin6_family = AF_INET;
+
+	pp->s_disp = OGCreateSema();
+	pp->s_ping = OGCreateSema();
 	//This function is executed first.
+
+	return pp;
 }
 
-void listener()
+void listener( struct PreparedPing* pp )
 {
-	static uint8_t listth;
-	if( listth ) return;
-	listth = 1;
-
-	OGUnlockSema( s_disp );
+	OGUnlockSema( pp->s_disp );
 	//Normally needs to call display(buf + 28, bytes - 28 ); on successful ping.
 	//This function is executed as a thread after setup.
 	//Really, we just use the s_disp semaphore to make sure we only launch disp's at correct times.
@@ -80,19 +82,21 @@ void listener()
 	return;
 }
 
-static HANDLE pinghandles[PINGTHREADS];
-
 static void * pingerthread( void * v )
 {
 	uint8_t ping_payload[MAX_PING_SIZE];
 
-	HANDLE ih = *((HANDLE*)v);
+	// copy arguments and free struct
+	struct WindowsPingArgs* args = (struct WindowsPingArgs*) v;
+	struct PreparedPing* pp = args->pp;
+	HANDLE ih = args->icmpHandle;
+	free(args);
 
 	int timeout_ms = pingperiodseconds * (PINGTHREADS-1) * 1000;
 	while(1)
 	{
-		OGLockSema( s_ping );
-		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ) );
+		OGLockSema( pp->s_ping );
+		int rl = load_ping_packet( ping_payload, sizeof( ping_payload ), PingData + pp->pingHostId );
 		struct repl_t
 		{
 			ICMP_ECHO_REPLY rply;
@@ -100,12 +104,12 @@ static void * pingerthread( void * v )
 		} repl;
 
 		DWORD res = IcmpSendEcho( ih,
-			((struct sockaddr_in*) &psaddr)->sin_addr.s_addr, ping_payload, rl,
+			((struct sockaddr_in*) &pp->psaddr)->sin_addr.s_addr, ping_payload, rl,
 			0, &repl, sizeof( repl ),
 			timeout_ms );
 		int err;
 		if( !res ) err = GetLastError();
-		OGLockSema( s_disp );
+		OGLockSema( pp->s_disp );
 
 		if( !res )
 		{
@@ -120,88 +124,76 @@ static void * pingerthread( void * v )
 		}
 		if( res )
 		{
-			display( repl.rply.Data, rl );
+			display( repl.rply.Data, rl, pp->pingHostId );
 		}
-		OGUnlockSema( s_disp );
+		OGUnlockSema( pp->s_disp );
 	}
 	return 0;
 }
 
-void singleping(struct sockaddr *addr, socklen_t addr_len )
+// create PINGTHREADS amount of pingerthread
+void createThreads( struct PreparedPing* pp )
 {
-	int i;
-	(void) addr;
-	(void) addr_len;
-
-	if( psaddr.sin6_family != AF_INET )
+	for( int i = 0; i < PINGTHREADS; i++ )
 	{
-		// ipv6 ICMP Ping is not supported on windows
-		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
-		exit( -1 );
-	}
-
-	static int did_init_threads = 0;
-	if( !did_init_threads )
-	{
-		did_init_threads = 1;
-		//Launch pinger threads
-		for( i = 0; i < PINGTHREADS; i++ )
-		{
-			HANDLE ih = pinghandles[i] = IcmpCreateFile();
-			if( ih == INVALID_HANDLE_VALUE )
-			{
-				ERRM( "Cannot create ICMP thread %d\n", i );
-				exit( 0 );
-			}
-
-			OGCreateThread( pingerthread, &pinghandles[i] );
-		}
-	}
-	//This function is executed as a thread after setup.
-
-	if( i >= PINGTHREADS-1 ) i = 0;
-	else i++;
-	OGUnlockSema( s_ping );
-}
-
-void ping(struct sockaddr *addr, socklen_t addr_len )
-{
-	int i;
-	(void) addr;
-	(void) addr_len;
-
-	using_regular_ping = 1;
-
-	if( psaddr.sin6_family != AF_INET )
-	{
-		// ipv6 ICMP Ping is not supported on windows
-		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
-		exit( -1 );
-	}
-
-	//Launch pinger threads
-	for( i = 0; i < PINGTHREADS; i++ )
-	{
-		HANDLE ih = pinghandles[i] = IcmpCreateFile();
+		HANDLE ih = IcmpCreateFile();
 		if( ih == INVALID_HANDLE_VALUE )
 		{
 			ERRM( "Cannot create ICMP thread %d\n", i );
 			exit( 0 );
 		}
 
-		OGCreateThread( pingerthread, &pinghandles[i] );
+		struct WindowsPingArgs* args = (struct WindowsPingArgs*) malloc(sizeof(struct WindowsPingArgs));
+		args->pp = pp;
+		args->icmpHandle = ih;
+		OGCreateThread( pingerthread, args );
 	}
+}
+
+// ipv6 ping is not supported on windows -> exit if ipv6 is required
+void checkIPv6( int family )
+{
+	if( family != AF_INET )
+	{
+		// ipv6 ICMP Ping is not implemented on windows - PRs welcome
+		ERRM( "ERROR: ipv6 ICMP Ping is not supported on windows\n" );
+		exit( -1 );
+	}
+}
+
+void singleping( struct PreparedPing* pp )
+{
+	checkIPv6( pp->psaddr.sin6_family );
+
+	static int did_init_threads = 0;
+	if( !did_init_threads )
+	{
+		did_init_threads = 1;
+		//Launch pinger threads
+		createThreads( pp );
+	}
+	//This function is executed as a thread after setup.
+
+	OGUnlockSema( pp->s_ping );
+}
+
+void ping( struct PreparedPing* pp )
+{
+	using_regular_ping = 1;
+
+	checkIPv6( pp->psaddr.sin6_family );
+
+	//Launch pinger threads
+	createThreads( pp );
+
 	//This function is executed as a thread after setup.
 
 	while(1)
 	{
-		if( i >= PINGTHREADS-1 ) i = 0;
-		else i++;
-		OGUnlockSema( s_ping );
+		OGUnlockSema( pp->s_ping );
 		OGUSleep( (int)(pingperiodseconds * 1000000) );
 	}
 }
-
 
 
 #else // ! WIN_USE_NO_ADMIN_PING
@@ -264,6 +256,7 @@ struct icmphdr
 		} frag;
 	} un;
 };
+#undef min
 #endif
 
 
@@ -280,8 +273,12 @@ struct packet
 #endif
 };
 
-int sd;
 int pid=-1;
+
+int min( int a, int b )
+{
+	return a < b ? a : b;
+}
 
 uint16_t checksum( const unsigned char * start, uint16_t len )
 {
@@ -298,34 +295,79 @@ uint16_t checksum( const unsigned char * start, uint16_t len )
 	return ~csum;
 }
 
-// setsockopt TTL to 255
-void setTTL(int sock)
+
+#ifdef WIN32
+void setTTL( int sock, int family )
 {
-	const int val=255;
+	(void) sock;
+	(void) family;
+	// nop on win
+}
 
-	assert(psaddr.sin6_family == AF_INET || psaddr.sin6_family == AF_INET6);
+#else
+// setsockopt TTL to 255
+void setTTL( int sock, int family )
+{
+	static const int val=255;
 
-	if ( setsockopt(sd, (psaddr.sin6_family == AF_INET) ? SOL_IP : SOL_IPV6, IP_TTL, &val, sizeof(val)) != 0)
+	assert(family == AF_INET || family == AF_INET6);
+
+	if ( setsockopt( sock, (family == AF_INET) ? SOL_IP : SOL_IPV6, IP_TTL, &val, sizeof(val)) != 0)
 	{
 		ERRM("Error: Failed to set TTL option.  Are you root?  Or can do sock_raw sockets?\n");
 		exit( -1 );
 	}
 }
+#endif
+
+void setNoBlock( int sock )
+{
+#ifdef WIN32
+	{
+		//Setup windows socket for nonblocking io.
+		unsigned long iMode = 1;
+		ioctlsocket(sock, FIONBIO, &iMode);
+	}
+#else
+	if ( fcntl(sock, F_SETFL, O_NONBLOCK) != 0 )
+		ERRM("Warning: Request nonblocking I/O failed.");
+#endif
+}
+
+// returns 1 = success; 0 = failed
+int bindDevice( int sock, const char* device )
+{
+#ifdef WIN32
+	(void) sock;
+	(void) device;
+
+#else
+	if(device)
+	{
+		if( setsockopt( sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1 ) != 0 )
+		{
+			return 0;
+		}
+	}
+#endif
+	return 1;
+}
 
 // 0 = failed, 1 = this is a ICMP Response
-int isICMPResponse(unsigned char* buf, int bytes)
+int isICMPResponse( int family, unsigned char* buf, int bytes )
 {
-	assert(psaddr.sin6_family == AF_INET || psaddr.sin6_family == AF_INET6);
+	if( family != AF_INET && family != AF_INET6 ) return 0;
 
-	if( bytes == -1 ) return 0;
+	if( bytes < 1 ) return 0;
 
-	if( psaddr.sin6_family == AF_INET ) // ipv4 compare
+	if( family == AF_INET ) // ipv4 compare
 	{
+		if( bytes < 21 ) return 0;
 		if( buf[9] != IPPROTO_ICMP ) return 0;
 		if( buf[20] !=  ICMP_ECHOREPLY ) return 0;
 
 	}
-	else if( psaddr.sin6_family == AF_INET6 ) // ipv6 compare
+	else if( family == AF_INET6 ) // ipv6 compare
 	{
 		if( buf[0] != ICMP6_ECHO_REPLY ) return 0;
 	}
@@ -333,56 +375,68 @@ int isICMPResponse(unsigned char* buf, int bytes)
 	return 1;
 }
 
-int createSocket()
+int createSocket( int family )
 {
-	if( psaddr.sin6_family == AF_INET )
+#ifdef WIN32
+	// no ipv6 support for windows
+	int fd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
+	{
+		static const int lttl = 0xff;
+		if (setsockopt(fd, IPPROTO_IP, IP_TTL, (const char*)&lttl, sizeof(lttl)) == SOCKET_ERROR)
+		{
+			printf( "Warning: No IP_TTL.\n" );
+		}
+	}
+	return fd;
+#else
+	if( family == AF_INET )
 	{
 		return socket(PF_INET, SOCK_RAW, IPPROTO_ICMP);
 	}
-	else if( psaddr.sin6_family == AF_INET6 )
+	else if( family == AF_INET6 )
 	{
 		return socket(PF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
 	}
 
 	// invalid af_family
 	return -1;
+#endif
 }
 
-void listener()
+void listener( struct PreparedPing* pp )
 {
-#ifndef WIN32
-	int sd = createSocket();
+	int listenSock = createSocket( pp->psaddr.sin6_family );
 
-	setTTL(sd);
-#endif
+	setTTL( listenSock, pp->psaddr.sin6_family );
 
-	struct sockaddr_in6 addr;
+	struct sockaddr_in6 recvFromAddr;
 	unsigned char buf[66000];
 #ifdef WIN32
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
 	for (;;)
 	{
-		socklen_t addrlenval=sizeof(addr);
-		int bytes;
+		socklen_t recvFromAddrLen = sizeof(recvFromAddr);
 
 #ifdef WIN32
 		WSAPOLLFD fda[1];
-		fda[0].fd = sd;
+		fda[0].fd = listenSock;
 		fda[0].events = POLLIN;
 		WSAPoll(fda, 1, 10);
 #endif
-		keep_retry_quick:
 
-		bytes = recvfrom(sd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, &addrlenval );
-		if( !isICMPResponse(buf, bytes) ) continue;
+		int bytes;
+
+keep_retry_quick:
+		bytes = recvfrom( listenSock, (void*) buf, sizeof(buf), 0, (struct sockaddr*)&recvFromAddr, &recvFromAddrLen );
+		if( !isICMPResponse( recvFromAddr.sin6_family, buf, bytes) ) continue;
 
 		// compare the sender
-		if( using_regular_ping && memcmp(&addr, &psaddr, addrlenval) != 0 ) continue;
+		if( using_regular_ping && memcmp(&recvFromAddr, &pp->psaddr, min(recvFromAddrLen, pp->psaddr_len) ) != 0 ) continue;
 
 		// sizeof(packet.hdr) + 20
 		int offset = 0;
-		if(addr.sin6_family == AF_INET) // ipv4
+		if( recvFromAddr.sin6_family == AF_INET ) // ipv4
 		{
 #ifdef __FreeBSD__
 			offset = 48;
@@ -396,7 +450,7 @@ void listener()
 		}
 
 		if ( bytes > 0 )
-			display(buf + offset, bytes - offset );
+			display(buf + offset, bytes - offset, pp->pingHostId );
 		else
 		{
 			ERRM("Error: recvfrom failed");
@@ -409,110 +463,76 @@ void listener()
 	exit( 0 );
 }
 
-void singleping(struct sockaddr *addr, socklen_t addr_len )
+// fill a packet with data ready to be written to a raw socket
+// returns the size of the packet
+int constructPack(struct packet* pckt, int family, int pingHostId, int cnt)
 {
-	int cnt=1;
+	int rsize = load_ping_packet( pckt->msg, sizeof( pckt->msg ), PingData + pingHostId );
 
-#ifdef WIN32
-	{
-		//Setup windows socket for nonblocking io.
-		unsigned long iMode = 1;
-		ioctlsocket(sd, FIONBIO, &iMode);
-	}
-#else
-	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
-		ERRM("Warning: Request nonblocking I/O failed.");
-#endif
+	// add the size of the header
+	rsize += sizeof( pckt->hdr );
 
-	double stime = OGGetAbsoluteTime();
+	// checksum is calculated, with zerofilled checksum field
+	pckt->hdr.checksum = 0;
 
-	struct packet pckt;
-
-	{
-		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
-		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
+	const uint8_t icmp_type = (family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
 #ifdef __FreeBSD__
-		pckt.hdr.icmp_code = 0;
-		pckt.hdr.icmp_type = ICMP_ECHO;
-		pckt.hdr.icmp_id = pid;
-		pckt.hdr.icmp_seq = cnt++;
-		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+	pckt->hdr.icmp_code = 0;
+	pckt->hdr.icmp_type = icmp_type;
+	pckt->hdr.icmp_id = pid;
+	pckt->hdr.icmp_seq = cnt;
+	pckt->hdr.icmp_cksum = checksum((const unsigned char *) pckt, rsize);
 #else
-		pckt.hdr.code = 0;
-		pckt.hdr.type = (psaddr.sin6_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
-		pckt.hdr.un.echo.id = pid;
-		pckt.hdr.un.echo.sequence = cnt++;
-		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
+	pckt->hdr.code = 0;
+	pckt->hdr.type = icmp_type;
+	pckt->hdr.un.echo.id = pid;
+	pckt->hdr.un.echo.sequence = cnt;
+	pckt->hdr.checksum = checksum((const unsigned char *) pckt, rsize);
 #endif
-
-		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, addr, addr_len);
-
-		if( sr <= 0 )
-		{
-			ping_failed_to_send = 1;
-			if( using_regular_ping )
-			{
-				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
-			}
-		}
-		else
-		{
-			ping_failed_to_send = 0;
-		}
-	} 
+	return rsize;
 }
 
-void ping(struct sockaddr *addr, socklen_t addr_len )
+void sendOnePing( struct PreparedPing* pp , int count )
+{
+	struct packet pckt;
+
+	int rsize = constructPack( &pckt, pp->psaddr.sin6_family, pp->pingHostId, count );
+	int sr = sendto(pp->fd, (char*)&pckt, rsize , 0, (const struct sockaddr*) &pp->psaddr, pp->psaddr_len);
+
+	struct PingData* pd = PingData + pp->pingHostId;
+	if( sr <= 0 )
+	{
+		pd->ping_failed_to_send = 1;
+		if( using_regular_ping )
+		{
+			ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
+		}
+	}
+	else
+	{
+		pd->ping_failed_to_send = 0;
+	}
+}
+
+void singleping( struct PreparedPing* pp )
+{
+	setNoBlock( pp->fd );
+
+	sendOnePing( pp, 1 );
+}
+
+void ping( struct PreparedPing* pp )
 {
 	int cnt=1;
 
 	using_regular_ping = 1;
-#ifdef WIN32
-	{
-		//Setup windows socket for nonblocking io.
-		unsigned long iMode = 1;
-		ioctlsocket(sd, FIONBIO, &iMode);
-	}
-#else
-	if ( fcntl(sd, F_SETFL, O_NONBLOCK) != 0 )
-		ERRM("Warning: Request nonblocking I/O failed.");
-#endif
+	setNoBlock( pp->fd );
 
 	double stime = OGGetAbsoluteTime();
 
-	struct packet pckt;
 	do
 	{
-		int rsize = load_ping_packet( pckt.msg, sizeof( pckt.msg ) );
-		memset( &pckt.hdr, 0, sizeof( pckt.hdr ) ); //This needs to be here, but I don't know why, since I think the struct is fully populated.
-#ifdef __FreeBSD__
-		pckt.hdr.icmp_code = 0;
-		pckt.hdr.icmp_type = ICMP_ECHO;
-		pckt.hdr.icmp_id = pid;
-		pckt.hdr.icmp_seq = cnt++;
-		pckt.hdr.icmp_cksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
-#else
-		pckt.hdr.code = 0;
-		pckt.hdr.type = (psaddr.sin6_family == AF_INET) ? ICMP_ECHO : ICMP6_ECHO_REQUEST;
-		pckt.hdr.un.echo.id = pid;
-		pckt.hdr.un.echo.sequence = cnt++;
-		pckt.hdr.checksum = checksum((const unsigned char *)&pckt, sizeof( pckt.hdr ) + rsize );
-#endif
-
-		int sr = sendto(sd, (char*)&pckt, sizeof( pckt.hdr ) + rsize , 0, addr, addr_len);
-
-		if( sr <= 0 )
-		{
-			ping_failed_to_send = 1;
-			if( using_regular_ping )
-			{
-				ERRMB("Ping send failed:\n%s (%d)\n", strerror(errno), errno);
-			}
-		}
-		else
-		{
-			ping_failed_to_send = 0;
-		}
+		sendOnePing( pp, cnt++ );
 
 		if( precise_ping )
 		{
@@ -532,72 +552,47 @@ void ping(struct sockaddr *addr, socklen_t addr_len )
 				OGUSleep( dlw );
 			}
 		}
-	} 	while( pingperiodseconds >= 0 );
+	} while( pingperiodseconds >= 0 );
 	//close( sd ); //Hacky, we don't close here because SD doesn't come from here, rather from ping_setup.  We may want to run this multiple times.
 }
 
-void ping_setup(const char * strhost, const char * device)
+struct PreparedPing* ping_setup(const char * strhost, const char * device)
 {
 	pid = getpid();
 
-#ifdef WIN32
-	WSADATA wsaData;
-	int r =	WSAStartup(MAKEWORD(2,2), &wsaData);
-	if( r )
-	{
-		ERRM( "Fault in WSAStartup\n" );
-		exit( -2 );
-	}
-#endif
+	struct PreparedPing* pp = (struct PreparedPing*) malloc(sizeof(struct PreparedPing));
 
+	memset(&pp->psaddr, 0, sizeof(pp->psaddr));
+	pp->psaddr_len = sizeof(pp->psaddr);
+	pp->psaddr.sin6_family = AF_INET;
 
-#ifdef WIN32
-	sd = WSASocket(AF_INET, SOCK_RAW, IPPROTO_ICMP, 0, 0, WSA_FLAG_OVERLAPPED);
-	{
-		int lttl = 0xff;
-		if (setsockopt(sd, IPPROTO_IP, IP_TTL, (const char*)&lttl, sizeof(lttl)) == SOCKET_ERROR)
-		{
-			printf( "Warning: No IP_TTL.\n" );
-		}
-	}
-#else
 	// resolve host
-	psaddr_len = sizeof(psaddr);
-
 	if( strhost )
-		resolveName((struct sockaddr*) &psaddr, &psaddr_len, strhost, AF_UNSPEC);
-	else
-		psaddr.sin6_family = AF_INET;
-
-	sd = createSocket();
-
-	setTTL(sd);
-
-	if(device)
 	{
-		if( setsockopt(sd, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) +1) != 0)
-		{
-			ERRM("Error: Failed to set Device option.  Are you root?  Or can do sock_raw sockets?\n");
-			exit( -1 );
-		}
+		resolveName((struct sockaddr*) &pp->psaddr, &pp->psaddr_len, strhost, AF_UNSPEC);
 	}
 
-#endif
-	if ( sd < 0 )
+	pp->fd = createSocket( pp->psaddr.sin6_family );
+	setTTL(pp->fd, pp->psaddr.sin6_family);
+
+	if ( pp->fd < 0 )
 	{
 		ERRM("Error: Could not create raw socket\n");
-		exit(0);
+		free(pp);
+		exit( -2 );
 	}
 
+	if( 0 == bindDevice( pp->fd, device ) )
+	{
+		ERRM("Error: Failed to set Device option. Are you root? Or can do sock_raw sockets?\n");
+		free( pp );
+		exit( -1 );
+	}
+
+	return pp;
 }
 
 #endif // WIN_USE_NO_ADMIN_PING
-
-
-void do_pinger( )
-{
-	ping((struct sockaddr*) &psaddr, psaddr_len );
-}
 
 // used by the ERRMB makro from error_handling.h
 char errbuffer[1024];
